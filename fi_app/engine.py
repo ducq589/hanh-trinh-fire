@@ -1,0 +1,426 @@
+"""Lõi tính toán – hàm Python thuần, không phụ thuộc giao diện hay cơ sở dữ liệu.
+
+Mọi công thức được chuyển nguyên từ Investment_tracking_v3.xlsx (đã kiểm chứng bằng Excel):
+- cột tính của tblGD (Giá dùng, SL tính, GT giao dịch, ΔSL, Tiền vào ròng, Cổ tức nhận, Dòng tiền)
+- sheet DanhMuc (giá mới nhất, giá trị, lãi/lỗ, XIRR, tái cân bằng)
+- sheet FI_Plan → "Kế hoạch FIRE" (Số FIRE, Lean/Coast/Full FIRE, NPER, dự phóng FV)
+"""
+from __future__ import annotations
+
+import datetime as dt
+import math
+from collections import defaultdict
+
+BUY_LIKE = ("Mua", "Vốn đầu kỳ")
+
+
+# ================================================================ helpers
+def to_date(v) -> dt.date | None:
+    if v in (None, ""):
+        return None
+    if isinstance(v, dt.datetime):
+        return v.date()
+    if isinstance(v, dt.date):
+        return v
+    return dt.date.fromisoformat(str(v)[:10])
+
+
+def n(v) -> float:
+    """Giống hàm N() của Excel: None/'' → 0."""
+    if v in (None, ""):
+        return 0.0
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return 0.0
+    return 0.0 if math.isnan(f) else f
+
+
+def trunc2(x: float) -> float:
+    """TRUNC(x, 2) – cách quỹ mở phân bổ chứng chỉ quỹ."""
+    return math.trunc(round(x * 100, 8)) / 100
+
+
+def months_between(start: dt.date, end: dt.date) -> int:
+    """DATEDIF(start, end, "m") – số tháng tròn."""
+    m = (end.year - start.year) * 12 + (end.month - start.month)
+    if end.day < start.day:
+        m -= 1
+    return max(m, 0)
+
+
+def vnd(x: float) -> str:
+    """Định dạng tiền kiểu Việt Nam: 4.150.000 ₫."""
+    return f"{x:,.0f}".replace(",", ".") + " ₫"
+
+
+def monthly(amount, freq: str) -> float:
+    a = n(amount)
+    return a / 12 if freq == "Năm" else a / 3 if freq == "Quý" else a
+
+
+# ================================================================ finance functions (Excel semantics)
+def xirr(values: list[float], dates: list[dt.date], guesses=(-0.05, 0.05, 0.1, -0.5)) -> float | None:
+    if len(values) < 2 or not any(v > 0 for v in values) or not any(v < 0 for v in values):
+        return None
+    d0 = dates[0]
+    t = [(d - d0).days / 365.0 for d in dates]
+
+    def f(r):
+        return sum(v / (1 + r) ** ti for v, ti in zip(values, t))
+
+    def df(r):
+        return sum(-ti * v / (1 + r) ** (ti + 1) for v, ti in zip(values, t))
+
+    for g in guesses:
+        r = g
+        try:
+            for _ in range(100):
+                fv, dfv = f(r), df(r)
+                if dfv == 0:
+                    break
+                nr = r - fv / dfv
+                if nr <= -1:
+                    nr = (r - 1) / 2
+                if abs(nr - r) < 1e-12:
+                    return nr
+                r = nr
+            if abs(f(r)) < 1e-6:
+                return r
+        except (OverflowError, ZeroDivisionError):
+            continue
+    lo, hi = -0.9999, 10.0  # bisection fallback
+    try:
+        flo, fhi = f(lo), f(hi)
+    except OverflowError:
+        return None
+    if flo * fhi > 0:
+        return None
+    for _ in range(300):
+        mid = (lo + hi) / 2
+        fm = f(mid)
+        if flo * fm <= 0:
+            hi = mid
+        else:
+            lo, flo = mid, fm
+    return (lo + hi) / 2
+
+
+def nper(rate: float, pmt: float, pv: float, fv: float) -> float | None:
+    """NPER(rate, pmt, pv, fv) của Excel (type = 0). None nếu không có nghiệm."""
+    if rate == 0:
+        return None if pmt == 0 else -(pv + fv) / pmt
+    num = pmt - fv * rate
+    den = pmt + pv * rate
+    if den == 0 or num / den <= 0:
+        return None
+    return math.log(num / den) / math.log(1 + rate)
+
+
+def fv(rate: float, periods: int, pmt: float, pv: float) -> float:
+    """FV(rate, nper, pmt, pv) của Excel (type = 0)."""
+    if rate == 0:
+        return -(pv + pmt * periods)
+    g = (1 + rate) ** periods
+    return -(pv * g + pmt * (g - 1) / rate)
+
+
+# ================================================================ prices
+class PriceBook:
+    """Tra giá: cùng ngày ưu tiên giá nhập tay > giá người dùng > giá thị trường; trùng dòng thì lấy trung bình."""
+
+    def __init__(self, prices: list[dict]):
+        acc: dict[tuple, list] = defaultdict(list)
+        for p in prices:
+            acc[(p["code"], to_date(p["date"]), int(p.get("is_manual") or 0))].append(float(p["price"]))
+        self._px = {k: sum(v) / len(v) for k, v in acc.items()}
+        self._dates: dict[str, set] = defaultdict(set)
+        for code, d, _ in self._px:
+            self._dates[code].add(d)
+
+    def on(self, code: str, d: dt.date) -> float | None:
+        # 1 = nhập tay, 0 = giá của người dùng (gia.csv/v3), -1 = giá thị trường dùng chung
+        for manual in (1, 0, -1):
+            if (code, d, manual) in self._px:
+                return self._px[(code, d, manual)]
+        return None
+
+    def latest(self, code: str) -> tuple[dt.date | None, float | None]:
+        ds = self._dates.get(code)
+        if not ds:
+            return None, None
+        d = max(ds)
+        return d, self.on(code, d)
+
+    def history(self, code: str) -> list[tuple[dt.date, float]]:
+        return sorted((d, self.on(code, d)) for d in self._dates.get(code, ()))
+
+
+# ================================================================ transactions
+def derive_tx(tx: dict, book: PriceBook) -> dict:
+    """Các cột tính của tblGD."""
+    t = tx["type"]
+    d = to_date(tx["date"])
+    price_used = n(tx.get("price")) if n(tx.get("price")) > 0 else n(book.on(tx["code"], d))
+    if tx.get("qty") not in (None, ""):
+        qty = n(tx["qty"])
+    elif t in BUY_LIKE and price_used > 0:
+        qty = trunc2(n(tx.get("amount")) / price_used)
+    else:
+        qty = 0.0
+    gt = qty * price_used if price_used > 0 else n(tx.get("amount"))
+    fee, tax = n(tx.get("fee")), n(tx.get("tax"))
+    dqty = qty if t in BUY_LIKE + ("Cổ tức CP/Thưởng",) else -qty if t == "Bán" else 0.0
+    net_in = gt + fee if t in BUY_LIKE else -(gt - fee - tax) if t == "Bán" else 0.0
+    dividend = n(tx.get("amount")) if t == "Cổ tức TM" else 0.0
+    cash = -(gt + fee) if t == "Mua" else (gt - fee - tax) if t == "Bán" else dividend
+    return {**tx, "d": d, "price_used": price_used, "qty_calc": qty, "value": gt, "dqty": dqty,
+            "net_in": net_in, "dividend": dividend, "cashflow": cash}
+
+
+# ================================================================ savings & goals
+def derive_savings(s: dict, tax: float, today: dt.date, maturity_days: float) -> dict:
+    received = n(s.get("start_balance")) + n(s.get("interest_gross")) * (1 - tax)
+    base = n(s.get("principal")) + n(s.get("topup"))
+    m = to_date(s.get("maturity"))
+    if m is None:
+        status = ""
+    elif m < today:
+        status = "Quá hạn xử lý"
+    elif (m - today).days <= maturity_days:
+        status = "Sắp đáo hạn"
+    else:
+        status = "Đang sinh lời"
+    return {**s, "received": received, "base": base, "growth": (received - base) / base if base else 0.0,
+            "status": status, "maturity_d": m}
+
+
+def derive_goals(goals: list[dict], savings: list[dict], today: dt.date) -> list[dict]:
+    out = []
+    for g in goals:
+        have = sum(s["received"] for s in savings if (s.get("goal") or "") == g["name"])
+        remaining = max(0.0, n(g.get("target")) - have)
+        due = to_date(g.get("due_date"))
+        months = (months_between(today, max(today, due)) + 1) if due else None
+        if months is not None and due < today:
+            months = 0
+        need = 0.0 if remaining <= 0 else (remaining if not months else remaining / months)
+        status = "Done" if remaining <= 0 else ("Quá hạn" if not months else "Đang góp")
+        out.append({**g, "have": have, "remaining": remaining, "months_left": months, "need_monthly": need,
+                    "status": status})
+    return out
+
+
+# ================================================================ holdings (sheet DanhMuc)
+def holdings(data: dict, today: dt.date | None = None) -> dict:
+    today = today or dt.date.today()
+    st = data["settings"]
+    tax, stale_days, mat_days = n(st.get("tax_interest", 0.05)), n(st.get("stale_days", 7)), n(st.get("maturity_days", 15))
+    book = PriceBook(data["prices"])
+    txs = [derive_tx(t, book) for t in data["transactions"]]
+    by_code: dict[str, list] = defaultdict(list)
+    for t in txs:
+        by_code[t["code"]].append(t)
+    savs = [derive_savings(s, tax, today, mat_days) for s in data["savings"]]
+
+    rows = []
+    for a in data["assets"]:
+        code, val = a["code"], a.get("valuation") or "Thị trường"
+        r = {**a, "qty": None, "cost": 0.0, "dividends": 0.0, "price_date": None, "price": None,
+             "value": 0.0, "xirr": None, "warning": ""}
+        if val == "Sổ tiết kiệm":
+            mine = [s for s in savs if s["code"] == code]
+            r["cost"] = sum(s["base"] for s in mine)
+            r["value"] = sum(s["received"] for s in mine)
+        else:
+            mine = by_code.get(code, [])
+            r["qty"] = sum(t["dqty"] for t in mine)
+            r["cost"] = sum(t["net_in"] for t in mine)
+            r["dividends"] = sum(t["dividend"] for t in mine)
+            r["price_date"], r["price"] = book.latest(code)
+            r["value"] = n(r["qty"]) * n(r["price"])
+            if r["price_date"] is None:
+                r["warning"] = "Chưa có giá" if mine else ""
+            elif (today - r["price_date"]).days > stale_days:
+                r["warning"] = f"Giá cũ {(today - r['price_date']).days} ngày"
+            flows = [t for t in mine if t["cashflow"] != 0]
+            if r["price_date"] and flows and not any(t["type"] == "Vốn đầu kỳ" for t in mine):
+                r["xirr"] = xirr([t["cashflow"] for t in flows] + [r["value"]],
+                                 [t["d"] for t in flows] + [r["price_date"]])
+        r["pnl"] = r["value"] - r["cost"] + r["dividends"]
+        r["pnl_pct"] = r["pnl"] / r["cost"] if r["cost"] else 0.0
+        r["fire_value"] = r["value"] if a.get("fire_include") else 0.0
+        rows.append(r)
+
+    total = sum(r["value"] for r in rows)
+    targeted = [r for r in rows if n(r.get("target_weight")) > 0]
+    tgt_total = sum(r["value"] for r in targeted)
+    anchor = max((r["value"] / n(r["target_weight"]) for r in targeted), default=0.0)
+    for r in rows:
+        r["weight"] = r["value"] / total if total else 0.0
+        if n(r.get("target_weight")) > 0:
+            r["current_weight"] = r["value"] / tgt_total if tgt_total else 0.0
+            r["rebalance_need"] = anchor * n(r["target_weight"]) - r["value"]
+        else:
+            r["current_weight"] = r["rebalance_need"] = None
+
+    tiers = []
+    from .db import TIERS  # nhãn tầng
+    for tier in TIERS:
+        tr = [r for r in rows if r.get("tier") == tier]
+        cost, value = sum(r["cost"] for r in tr), sum(r["value"] for r in tr)
+        pnl = sum(r["pnl"] for r in tr)
+        tiers.append({"tier": tier, "cost": cost, "value": value, "pnl": pnl,
+                      "pnl_pct": pnl / cost if cost else 0.0, "weight": value / total if total else 0.0,
+                      "fire_value": sum(r["fire_value"] for r in tr)})
+
+    cost_total = sum(r["cost"] for r in rows)
+    pnl_total = sum(r["pnl"] for r in rows)
+    return {"rows": rows, "tiers": tiers, "transactions": txs, "savings": savs,
+            "goals": derive_goals(data["goals"], savs, today), "book": book,
+            "total_value": total, "total_cost": cost_total, "total_pnl": pnl_total,
+            "total_pnl_pct": pnl_total / cost_total if cost_total else 0.0,
+            "total_dividends": sum(r["dividends"] for r in rows),
+            "fire_value_gross": sum(r["fire_value"] for r in rows)}
+
+
+# ================================================================ cash-flow profile (sheet Profile)
+def cashflow_summary(items: list[dict]) -> dict:
+    g = defaultdict(float)
+    for it in items:
+        g[it["grp"]] += monthly(it.get("amount"), it.get("freq") or "Tháng")
+    active, passive = g["Thu nhập chủ động"], g["Thu nhập thụ động"]
+    essential, flexible, invest = g["Chi thiết yếu"], g["Chi linh hoạt"], g["Đầu tư định kỳ"]
+    income, expense = active + passive, essential + flexible
+    surplus = income - expense
+    return {"active": active, "passive": passive, "income": income, "essential": essential,
+            "flexible": flexible, "expense": expense, "surplus": surplus, "invest": invest,
+            "after_invest": surplus - invest,
+            "savings_rate": surplus / income if income else 0.0,
+            "essential_ratio": essential / income if income else 0.0}
+
+
+# ================================================================ FIRE plan (sheet FI_Plan)
+def fire_plan(data: dict, h: dict, today: dt.date | None = None, extra_invest: float = 0.0,
+              expense_factor: float = 1.0, years: int = 40) -> dict:
+    today = today or dt.date.today()
+    a = data["assumptions"]
+    cf = cashflow_summary(data["cashflow"])
+    age = int(n(a.get("current_age"))) or None
+    target_age = int(n(a.get("target_age"))) or None
+    infl = n(a.get("inflation"))
+    swr = n(a.get("swr")) or 0.04
+    em_target = n(a.get("emergency_months")) or 6
+    rows = h["rows"]
+    fire_gross = sum(r["fire_value"] for r in rows)
+    ret_auto = (sum(r["fire_value"] * n(r.get("exp_return")) for r in rows) / fire_gross) if fire_gross else 0.08
+    nominal = n(a.get("return_nominal")) if a.get("return_nominal") not in (None, "") else ret_auto
+    real = (1 + nominal) / (1 + infl) - 1
+    debt = sum(n(l.get("balance")) for l in data["liabilities"])
+    assets = max(0.0, fire_gross - debt)
+
+    expense = cf["expense"] * expense_factor
+    essential = cf["essential"]  # kịch bản "Nếu…" chỉ thay đổi tổng chi tiêu, không đổi mức chi thiết yếu
+    invest = cf["invest"] + extra_invest
+    fire_number = expense * 12 / swr if expense else None
+    lean = essential * 12 / swr if essential else None
+    coast = (fire_number / (1 + real) ** max(0.0, target_age - age)) if (fire_number and age and target_age) else None
+
+    def years_to(target):
+        if not target:
+            return None
+        if assets >= target:
+            return 0.0
+        k = nper(real / 12, -invest, -assets, target)
+        return k / 12 if k is not None else None
+
+    y_full, y_lean = years_to(fire_number), years_to(lean)
+    passive_sust = assets * swr / 12
+    em_value = sum(r["value"] for r in rows if r["code"] == a.get("emergency_code", "QKC"))
+    em_months = em_value / cf["essential"] if cf["essential"] else None
+
+    proj, d = [], assets
+    for k in range(years):
+        if k > 0:
+            d = fv(real / 12, 12, -invest, -d)
+        label = ""
+        if fire_number:
+            label = "Full FIRE" if d >= fire_number else ("Lean FIRE" if lean and d >= lean else "")
+        proj.append({"k": k, "year": today.year + k, "age": (age + k) if age else None, "assets": d,
+                     "full": fire_number or 0.0, "lean": lean or 0.0,
+                     "full_nominal": (fire_number or 0.0) * (1 + infl) ** k,
+                     "pct": d / fire_number if fire_number else None, "milestone": label})
+
+    return {
+        "cf": cf, "age": age, "target_age": target_age, "inflation": infl, "swr": swr,
+        "return_auto": ret_auto, "return_nominal": nominal, "return_is_auto": a.get("return_nominal") in (None, ""),
+        "real": real, "debt": debt, "fire_gross": fire_gross, "assets": assets,
+        "expense": expense, "essential": essential, "invest": invest,
+        "fire_number": fire_number, "lean": lean, "coast": coast,
+        "progress": assets / fire_number if fire_number else None,
+        "lean_progress": assets / lean if lean else None,
+        "passive_sustainable": passive_sust, "passive_declared": cf["passive"],
+        "passive_ratio": (passive_sust + cf["passive"]) / expense if expense else None,
+        "years_full": y_full, "years_lean": y_lean,
+        "year_full": today.year + math.ceil(y_full) if y_full is not None else None,
+        "age_full": age + math.ceil(y_full) if (y_full is not None and age) else None,
+        "coast_reached": (assets >= coast) if coast else None,
+        "coast_gap": (coast - assets) if coast else None,
+        "emergency_value": em_value, "emergency_months": em_months, "emergency_target": em_target,
+        "emergency_gap": (em_target - em_months) * cf["essential"] if em_months is not None and em_months < em_target else 0.0,
+        "projection": proj,
+    }
+
+
+# ================================================================ snapshot & reminders
+def snapshot(data: dict, h: dict, fp: dict, today: dt.date | None = None, note: str = "") -> dict:
+    today = today or dt.date.today()
+    return {"date": today.isoformat(), "total_assets": h["total_value"], "liabilities": fp["debt"],
+            "net_worth": h["total_value"] - fp["debt"], "fire_assets": fp["assets"],
+            "fire_number": fp["fire_number"], "fire_progress": fp["progress"],
+            "savings_rate": fp["cf"]["savings_rate"], "note": note}
+
+
+def needs_monthly_snapshot(snapshots: list[dict], today: dt.date | None = None) -> bool:
+    today = today or dt.date.today()
+    return not any(str(s["date"])[:7] == today.strftime("%Y-%m") for s in snapshots)
+
+
+def reminders(data: dict, h: dict, fp: dict, today: dt.date | None = None) -> list[tuple[str, str]]:
+    """Danh sách (mức độ, nội dung): 'error' | 'warning' | 'info'."""
+    today = today or dt.date.today()
+    out: list[tuple[str, str]] = []
+    for r in h["rows"]:
+        if r["warning"]:
+            out.append(("warning", f"**{r['code']}**: {r['warning']} – cập nhật ở trang Giá."))
+    for s in h["savings"]:
+        if s["status"] == "Quá hạn xử lý":
+            out.append(("error", f"Sổ **{s['name']}** đã đáo hạn {s['maturity_d']:%d/%m/%Y} – cần tất toán/tái tục."))
+        elif s["status"] == "Sắp đáo hạn":
+            out.append(("warning", f"Sổ **{s['name']}** sắp đáo hạn {s['maturity_d']:%d/%m/%Y} "
+                                   f"({(s['maturity_d'] - today).days} ngày)."))
+        if s["base"] and (n(s.get("start_balance")) - s["base"]) / s["base"] > 0.15:
+            out.append(("info", f"Sổ **{s['name']}**: gửi đầu kỳ lớn hơn gốc + nạp thêm "
+                                f"{(n(s.get('start_balance')) - s['base']) / s['base']:.0%} – kiểm tra cột Nạp thêm."))
+        if s["code"] == "SF" and not s.get("goal"):
+            out.append(("info", f"Sổ **{s['name']}** thuộc Sinking Fund nhưng chưa gán mục tiêu."))
+    for g in h["goals"]:
+        if g["status"] == "Quá hạn":
+            out.append(("error", f"Mục tiêu **{g['name']}** đã quá hạn, còn thiếu {vnd(g['remaining'])}."))
+        elif g["remaining"] > 0:
+            out.append(("info", f"Mục tiêu **{g['name']}**: còn thiếu {vnd(g['remaining'])}, "
+                                f"cần góp {vnd(g['need_monthly'])}/tháng."))
+    pu = to_date(data["assumptions"].get("profile_updated"))
+    if not pu:
+        out.append(("warning", "Chưa có ngày rà soát hồ sơ thu chi – cập nhật ở trang Thu chi."))
+    elif (today - pu).days > 90:
+        out.append(("warning", f"Hồ sơ thu chi đã {(today - pu).days} ngày chưa rà soát (nên rà mỗi quý)."))
+    if fp["cf"]["income"] and fp["cf"]["after_invest"] < 0:
+        out.append(("warning", f"Cam kết đầu tư vượt dòng tiền dư {vnd(-fp['cf']['after_invest'])}/tháng."))
+    if fp["emergency_gap"] > 0:
+        out.append(("warning", f"Quỹ khẩn cấp đủ {fp['emergency_months']:.1f}/{fp['emergency_target']:.0f} tháng "
+                               f"chi thiết yếu – thiếu {vnd(fp['emergency_gap'])}."))
+    for t in data["transactions"]:
+        if t.get("note") and "XÁC NHẬN" in str(t["note"]).upper():
+            out.append(("info", f"Giao dịch {t['code']} ngày {to_date(t['date']):%d/%m/%Y}: {t['note']}"))
+    return out

@@ -1,0 +1,14 @@
+# Dữ liệu cá nhân – KHÔNG đưa lên GitHub
+data/
+xuat/
+*.db
+*.xlsx
+*.csv
+.streamlit/secrets.toml
+
+# Môi trường
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store

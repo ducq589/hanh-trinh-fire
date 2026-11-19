@@ -1,0 +1,27 @@
+name: Lấy giá hằng ngày
+
+on:
+  schedule:
+    # Giờ UTC. 10:00 UTC = 17:00 VN (sau phiên chứng khoán) · 02:00 UTC = 09:00 VN (NAV quỹ công bố hôm trước)
+    - cron: "0 10 * * 1-5"
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install requests "psycopg[binary]>=3.2,<4" openpyxl pandas
+      - name: Lấy giá và ghi vào Supabase
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python jobs/fetch_prices.py

@@ -35,19 +35,19 @@ if store.is_cloud:
 
 pages = {
     "Theo dõi": [
-        st.Page("pages/tong_quan.py", title="Tổng quan", icon="🏠", default=True),
-        st.Page("pages/ke_hoach_fire.py", title="Kế hoạch FIRE", icon="🔥"),
-        st.Page("pages/lich_su.py", title="Lịch sử", icon="📈"),
+        st.Page("views/tong_quan.py", title="Tổng quan", icon="🏠", default=True),
+        st.Page("views/ke_hoach_fire.py", title="Kế hoạch FIRE", icon="🔥"),
+        st.Page("views/lich_su.py", title="Lịch sử", icon="📈"),
     ],
     "Nhập liệu": [
-        st.Page("pages/giao_dich.py", title="Giao dịch", icon="🧾"),
-        st.Page("pages/gia.py", title="Giá", icon="💹"),
-        st.Page("pages/tai_san.py", title="Tài sản", icon="🗂️"),
-        st.Page("pages/tiet_kiem.py", title="Tiết kiệm, Mục tiêu & Nợ", icon="🏦"),
-        st.Page("pages/thu_chi.py", title="Thu chi", icon="💰"),
+        st.Page("views/giao_dich.py", title="Giao dịch", icon="🧾"),
+        st.Page("views/gia.py", title="Giá", icon="💹"),
+        st.Page("views/tai_san.py", title="Tài sản", icon="🗂️"),
+        st.Page("views/tiet_kiem.py", title="Tiết kiệm, Mục tiêu & Nợ", icon="🏦"),
+        st.Page("views/thu_chi.py", title="Thu chi", icon="💰"),
     ],
     "Hệ thống": [
-        st.Page("pages/sao_luu.py", title="Sao lưu & Cài đặt", icon="⚙️"),
+        st.Page("views/sao_luu.py", title="Sao lưu & Cài đặt", icon="⚙️"),
     ],
 }
 nav = st.navigation(pages)

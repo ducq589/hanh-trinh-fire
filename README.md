@@ -3,7 +3,7 @@
 Webapp theo dõi tài sản tích sản và kế hoạch FIRE (Financial Independence, Retire Early).
 Streamlit + SQLite (chạy trên máy) hoặc Supabase Postgres (cloud, đăng nhập email, nhiều người dùng, Row Level Security).
 
-- `app.py`, `pages/` – giao diện
+- `app.py`, `views/` – giao diện
 - `fi_app/engine.py` – lõi tính toán (XIRR, tháp tài sản, tái cân bằng, Lean/Coast/Full FIRE)
 - `fi_app/sources.py` – lấy giá tự động (Fmarket, VNDirect, PNJ)
 - `supabase/schema.sql` – schema + RLS cho Supabase

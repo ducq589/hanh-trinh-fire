@@ -50,7 +50,8 @@ def verify_code(cfg: dict, email: str, code: str) -> tuple[dict | None, str | No
 
 def login_screen(cfg: dict) -> None:
     """Vẽ màn hình đăng nhập; khi thành công lưu st.session_state['auth'] và chạy lại."""
-    st.markdown("<div style='height:6vh'></div>", unsafe_allow_html=True)
+    st.markdown("<style>[data-testid='stSidebar'],[data-testid='stSidebarCollapsedControl']{display:none}</style>"
+                "<div style='height:6vh'></div>", unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 2, 1])
     with mid:
         st.title("🔥 Hành trình FIRE")

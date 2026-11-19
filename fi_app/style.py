@@ -66,6 +66,23 @@ button[data-testid="stBaseButton-primaryFormSubmit"] {{ color: #111 !important; 
 .big-total .lb {{ color:{MUTED}; font-size:.85rem; }} .big-total .v {{ color:{LIME}; font-size:1.7rem; font-weight:700; }}
 .pill {{ display:inline-block; background:#1C1C1C; border:1px solid #333; color:#DADADA; border-radius:999px;
         padding:3px 12px; font-size:.78rem; }}
+/* ---- các bước hướng dẫn ---- */
+.steps {{ display:flex; flex-direction:column; gap:10px; }}
+.step {{ display:flex; gap:14px; align-items:flex-start; background:{CARD}; border:1px solid #2C2C2C;
+        border-radius:16px; padding:14px 16px; }}
+.step .n {{ flex:none; width:30px; height:30px; border-radius:50%; background:{LIME}; color:#111;
+           font-weight:700; display:flex; align-items:center; justify-content:center; }}
+.step .t {{ font-weight:600; color:{TEXT}; margin-bottom:2px; }}
+.step .d {{ color:#BDBDBD; font-size:.9rem; line-height:1.5; }}
+.step .d b {{ color:{LIME}; font-weight:600; }}
+.tip {{ background:rgba(182,243,106,.08); border:1px solid rgba(182,243,106,.25); color:#DDF5BF;
+       border-radius:14px; padding:10px 14px; font-size:.88rem; margin:8px 0; }}
+.cal {{ display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; }}
+.cal .c {{ background:{CARD}; border:1px solid #2C2C2C; border-radius:16px; padding:14px; }}
+.cal .h {{ color:{LIME}; font-weight:700; margin-bottom:6px; }}
+.cal ul {{ margin:0; padding-left:18px; color:#CFCFCF; font-size:.88rem; line-height:1.6; }}
+@media (max-width: 900px) {{ .cal {{ grid-template-columns: repeat(2, minmax(0,1fr)); }} }}
+
 /* ---- nút liên kết (st.page_link) dạng viên thuốc ---- */
 [data-testid="stPageLink"] a {{ background: #1C1C1C; border: 1px solid #333; border-radius: 999px;
   justify-content: center; padding: 6px 14px; }}
@@ -106,6 +123,35 @@ def kpi(label: str, value: str, sub: str = "", lime: bool = False, progress: flo
 def kpi_grid(cards: list[str]) -> str:
     """Lưới thẻ KPI: 4 cột trên máy tính, 2 cột trên điện thoại."""
     return f'<div class="kpis">{"".join(cards)}</div>'
+
+
+def steps(items: list[tuple[str, str]], start: int = 1) -> str:
+    """Danh sách bước đánh số. items: (tiêu đề, mô tả – cho phép <b>…</b>)."""
+    out = "".join(f'<div class="step"><div class="n">{i}</div><div><div class="t">{esc(t)}</div>'
+                  f'<div class="d">{d}</div></div></div>' for i, (t, d) in enumerate(items, start))
+    return f'<div class="steps">{out}</div>'
+
+
+def tip(text: str) -> str:
+    return f'<div class="tip">💡 {text}</div>'
+
+
+def flow(nodes: list[tuple[str, str]], edges: list[tuple[str, str, str]] | None = None, rankdir: str = "LR",
+         highlight: tuple[str, ...] = ()) -> str:
+    """Sơ đồ quy trình Graphviz (DOT) tông tối. nodes: (id, nhãn); edges: (từ, tới, nhãn).
+    Mặc định nối tuần tự các node nếu không truyền edges."""
+    edges = edges if edges is not None else [(a[0], b[0], "") for a, b in zip(nodes, nodes[1:])]
+    font = 'fontname="Be Vietnam Pro,Helvetica,Arial"'
+    lines = [f'digraph G {{ rankdir={rankdir}; bgcolor="transparent"; pad=0.2; nodesep=0.35; ranksep=0.45;',
+             f'node [shape=box, style="rounded,filled", fillcolor="{CARD}", color="#3A3A3A", fontcolor="{TEXT}", '
+             f'{font}, fontsize=12, margin="0.18,0.10", penwidth=1.2];',
+             f'edge [color="{LIME}", fontcolor="#BDBDBD", {font}, fontsize=10, arrowsize=0.7, penwidth=1.3];']
+    for nid, label in nodes:
+        extra = f', fillcolor="{LIME}", fontcolor="#111111", color="{LIME}"' if nid in highlight else ""
+        lines.append(f'{nid} [label="{label}"{extra}];')
+    for a, b, lbl in edges:
+        lines.append(f'{a} -> {b}' + (f' [label=" {lbl} "]' if lbl else "") + ";")
+    return "\n".join(lines) + "}"
 
 
 def legend(items: list[tuple[str, str, str]]) -> str:

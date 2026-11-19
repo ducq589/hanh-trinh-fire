@@ -162,6 +162,14 @@ def login_screen(cfg: dict) -> None:
                 st.session_state["_login_step"] = "email"
                 st.rerun()
         st.caption("Dữ liệu của mỗi tài khoản được tách riêng; người khác không xem được dữ liệu của bạn.")
+        with st.expander("Lần đầu dùng app? Xem cách đăng nhập"):
+            from . import style
+            st.html(style.steps([
+                ("Nhập email", "Email phải được người quản trị cấp quyền trước. Bấm <b>Gửi mã đăng nhập</b>."),
+                ("Mở Gmail", "Tìm email <b>“Mã đăng nhập Hành trình FIRE”</b> (xem cả Spam) và lấy mã 6 số."),
+                ("Nhập mã", "Giữ ô <b>Ghi nhớ đăng nhập</b> để lần sau vào thẳng, rồi bấm <b>Đăng nhập</b>."),
+                ("Sau khi vào", "Mở <b>Hệ thống → Hướng dẫn</b> để xem các bước thiết lập và sử dụng."),
+            ]))
 
 
 def logout(cfg: dict | None = None) -> None:

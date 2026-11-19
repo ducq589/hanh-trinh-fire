@@ -21,37 +21,37 @@ if not st.session_state.get("_startup_done"):
         if not db.is_empty(store) and prices.should_auto_fetch(store):
             with st.spinner("Đang cập nhật giá mới nhất…"):
                 res = prices.fetch_auto(store)
-            st.toast(f"Đã cập nhật {res['saved']} giá tự động", icon="💹")
+            st.toast(f"Đã cập nhật {res['saved']} giá tự động")
     except Exception as exc:  # mất mạng / nguồn lỗi: app vẫn chạy bình thường
-        st.toast(f"Không lấy được giá tự động: {exc}", icon="⚠️")
+        st.toast(f"Không lấy được giá tự động: {exc}")
     s, data, h, fp = ui.state(store)
     if data["assets"] and engine.needs_monthly_snapshot(data["snapshots"]):
         db.save_snapshot(store, engine.snapshot(data, h, fp, note="Tự động đầu tháng"))
-        st.toast("Đã tự chụp Snapshot tài sản tháng này", icon="📸")
+        st.toast("Đã tự chụp Snapshot tài sản tháng này")
 
 with st.sidebar:
     if store.is_cloud:
         st.html(style.hello(ui.display_name(store.email), "Xin chào!"))
-        st.button("Đăng xuất", width="stretch", on_click=lambda: (store.close(), auth.logout(ui.cloud_config())))
+        st.button("Đăng xuất", width="stretch", key=style.ic("logout", "dangxuat"), on_click=lambda: (store.close(), auth.logout(ui.cloud_config())))
     else:
         st.html(style.hello("Bản trên máy", "Xin chào!"))
 
 pages = {
     "Theo dõi": [
-        st.Page("views/tong_quan.py", title="Tổng quan", icon="🏠", default=True),
-        st.Page("views/ke_hoach_fire.py", title="Kế hoạch FIRE", icon="🔥"),
-        st.Page("views/lich_su.py", title="Lịch sử", icon="📈"),
+        st.Page("views/tong_quan.py", title="Tổng quan", default=True),
+        st.Page("views/ke_hoach_fire.py", title="Kế hoạch FIRE"),
+        st.Page("views/lich_su.py", title="Lịch sử"),
     ],
     "Nhập liệu": [
-        st.Page("views/giao_dich.py", title="Giao dịch", icon="🧾"),
-        st.Page("views/gia.py", title="Giá", icon="💹"),
-        st.Page("views/tai_san.py", title="Tài sản", icon="🗂️"),
-        st.Page("views/tiet_kiem.py", title="Tiết kiệm, Mục tiêu & Nợ", icon="🏦"),
-        st.Page("views/thu_chi.py", title="Thu chi", icon="💰"),
+        st.Page("views/giao_dich.py", title="Giao dịch"),
+        st.Page("views/gia.py", title="Giá"),
+        st.Page("views/tai_san.py", title="Tài sản"),
+        st.Page("views/tiet_kiem.py", title="Tiết kiệm, Mục tiêu & Nợ"),
+        st.Page("views/thu_chi.py", title="Thu chi"),
     ],
     "Hệ thống": [
-        st.Page("views/huong_dan.py", title="Hướng dẫn", icon="📖"),
-        st.Page("views/sao_luu.py", title="Sao lưu & Cài đặt", icon="⚙️"),
+        st.Page("views/huong_dan.py", title="Hướng dẫn"),
+        st.Page("views/sao_luu.py", title="Sao lưu & Cài đặt"),
     ],
 }
 nav = st.navigation(pages)

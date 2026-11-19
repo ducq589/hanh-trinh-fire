@@ -7,9 +7,8 @@ from fi_app import engine, style, ui
 c, data, h, fp = ui.state()
 
 latest = max((r["price_date"] for r in h["rows"] if r["price_date"]), default=None)
-st.title("Tổng quan gia sản")
-st.caption(f"Bức tranh tài chính của bạn · giá cập nhật đến {ui.d(latest)} · "
-           f"{len(data['transactions'])} giao dịch · {len(data['assets'])} tài sản")
+style.title("home", "Tổng quan gia sản", f"Bức tranh tài chính của bạn · giá cập nhật đến {ui.d(latest)} · "
+            f"{len(data['transactions'])} giao dịch · {len(data['assets'])} tài sản")
 
 if not data["assets"]:
     st.info("Chưa có dữ liệu. Vào **Sao lưu & Cài đặt** để nhập từ file Excel v3.")
@@ -20,13 +19,13 @@ net = h["total_value"] - fp["debt"]
 st.html(style.kpi_grid([
     style.kpi("Tổng tài sản", ui.tr(h["total_value"]),
               f"{'+' if h['total_pnl'] >= 0 else ''}{ui.pct(h['total_pnl_pct'])} so với vốn",
-              lime=True, trend="up" if h["total_pnl"] >= 0 else "down"),
-    style.kpi("Lãi/lỗ", ui.tr(h["total_pnl"]), f"Vốn thuần {ui.tr(h['total_cost'])}"),
-    style.kpi("Tài sản ròng", ui.tr(net), f"Đã trừ nợ {ui.tr(fp['debt'])}"),
+              lime=True, trend="up" if h["total_pnl"] >= 0 else "down", icon="wallet"),
+    style.kpi("Lãi/lỗ", ui.tr(h["total_pnl"]), f"Vốn thuần {ui.tr(h['total_cost'])}", icon="trending-up"),
+    style.kpi("Tài sản ròng", ui.tr(net), f"Đã trừ nợ {ui.tr(fp['debt'])}", icon="pig-money"),
     style.kpi("Tiến độ Full FIRE", ui.pct(fp["progress"]),
               (f"Đạt năm {fp['year_full']} · còn {ui.num(fp['years_full'], 1)} năm"
                if fp["year_full"] else "Cần khai Thu chi để tính"),
-              progress=fp["progress"] or 0),
+              progress=fp["progress"] or 0, icon="target"),
 ]))
 
 st.write("")
@@ -72,13 +71,15 @@ with right:
         a1, a2 = st.columns([3, 2], vertical_alignment="center")
         a1.markdown("**Thao tác nhanh**")
         a1.caption("Ghi một lần mua DCA hoặc cập nhật giá")
-        a2.page_link("views/giao_dich.py", label="＋ Mua DCA", width="stretch")
-        a2.page_link("views/gia.py", label="↻ Giá", width="stretch")
+        with a2.container(key=style.ic("plus", "lk_dca")):
+            st.page_link("views/giao_dich.py", label="Mua DCA", width="stretch")
+        with a2.container(key=style.ic("refresh", "lk_gia")):
+            st.page_link("views/gia.py", label="Giá", width="stretch")
 
 # --------------------------------------------------------------- reminders
 rem = engine.reminders(data, h, fp)
 urgent = [r for r in rem if r[0] != "info"]
-with st.expander(f"🔔 Việc cần chú ý ({len(rem)})", expanded=bool(urgent)):
+with st.expander(f"Việc cần chú ý ({len(rem)})", expanded=bool(urgent), key=style.ic("bell", "nhacviec")):
     if not rem:
         st.success("Không có việc gì cần xử lý.")
     for level, head in (("error", "Cần xử lý ngay"), ("warning", "Nên làm sớm"), ("info", "Để ý")):

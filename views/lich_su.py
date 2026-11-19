@@ -5,12 +5,12 @@ import streamlit as st
 from fi_app import db, engine, style, ui
 
 c, data, h, fp = ui.state()
-st.title("📈 Lịch sử tài sản ròng")
+style.title("chart-line", "Lịch sử tài sản ròng")
 st.caption("App tự chụp 1 Snapshot mỗi tháng khi mở lần đầu trong tháng. Có thể chụp thêm bất cứ lúc nào.")
 
 col1, col2 = st.columns([1, 3])
 note = col2.text_input("Ghi chú cho lần chụp", placeholder="VD: sau khi nhận thưởng Tết")
-if col1.button("📸 Chụp ngay", type="primary"):
+if col1.button("Chụp ngay", type="primary", key=style.ic("camera", "chup")):
     db.save_snapshot(c, engine.snapshot(data, h, fp, note=note or "Chụp thủ công"))
     ui.flash("Đã lưu Snapshot hôm nay")
     st.rerun()

@@ -168,11 +168,11 @@ def has_changes(editor_key: str) -> bool:
     return bool(ch.get("edited_rows") or ch.get("added_rows") or ch.get("deleted_rows"))
 
 
-def flash(msg: str, icon: str = "✅"):
+def flash(msg: str, icon: str | None = None):
     st.session_state["_flash"] = (msg, icon)
 
 
 def show_flash():
     f = st.session_state.pop("_flash", None)
     if f:
-        st.toast(f[0], icon=f[1])
+        st.toast(f[0], icon=f[1]) if f[1] else st.toast(f[0])

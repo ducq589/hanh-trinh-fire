@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import html
+from urllib.parse import quote
 
 import plotly.graph_objects as go
 import streamlit as st
+
+from .icons import ICONS
 
 LIME = "#B6F36A"
 CARD = "#242424"
@@ -66,6 +69,19 @@ button[data-testid="stBaseButton-primaryFormSubmit"] {{ color: #111 !important; 
 .big-total .lb {{ color:{MUTED}; font-size:.85rem; }} .big-total .v {{ color:{LIME}; font-size:1.7rem; font-weight:700; }}
 .pill {{ display:inline-block; background:#1C1C1C; border:1px solid #333; color:#DADADA; border-radius:999px;
         padding:3px 12px; font-size:.78rem; }}
+/* ---- tiêu đề trang + icon ---- */
+.pt {{ display:flex; align-items:center; gap:14px; margin: 0 0 4px; }}
+.pt h1 {{ margin:0; padding:0; font-size:2.2rem; font-weight:700; color:{TEXT}; line-height:1.2; }}
+.pt-ic {{ width:46px; height:46px; border-radius:14px; background:{LIME}; display:flex; align-items:center;
+          justify-content:center; flex:none; }}
+.pt-cap {{ color:{MUTED}; font-size:.88rem; margin: 2px 0 14px; }}
+.kpi {{ position:relative; }}
+.kpi .ki {{ position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%; background:#1C1C1C;
+           border:1px solid #333; display:flex; align-items:center; justify-content:center; }}
+.kpi .ki.lime {{ background:{LIME}; border-color:{LIME}; }}
+@media (max-width: 640px) {{ .pt h1 {{ font-size:1.5rem; }} .pt-ic {{ width:38px; height:38px; border-radius:12px; }}
+  .kpi .ki {{ width:28px; height:28px; top:10px; right:10px; }} }}
+
 /* ---- các bước hướng dẫn ---- */
 .steps {{ display:flex; flex-direction:column; gap:10px; }}
 .step {{ display:flex; gap:14px; align-items:flex-start; background:{CARD}; border:1px solid #2C2C2C;
@@ -101,9 +117,81 @@ button[data-testid="stBaseButton-primaryFormSubmit"] {{ color: #111 !important; 
 """
 
 
+# ---------------------------------------------------------------- icon Tabler
+# Trang (đường dẫn URL) → icon ở menu thanh bên
+NAV_ICONS = {"": "home", "ke_hoach_fire": "flame", "lich_su": "chart-line", "giao_dich": "receipt",
+             "gia": "chart-candle", "tai_san": "briefcase", "tiet_kiem": "building-bank", "thu_chi": "cash",
+             "huong_dan": "book", "sao_luu": "settings"}
+
+
+def svg(name: str, size: int = 18, color: str = "currentColor", stroke: float = 2, cls: str = "") -> str:
+    """Icon Tabler chèn vào HTML (st.html lọc bỏ thẻ <svg>, nên vẽ bằng CSS mask từ biến --ti-<tên>)."""
+    assert name in ICONS, name
+    return (f'<span class="tic ti-{name} {cls}" style="width:{size}px;height:{size}px;color:{color}" '
+            f'aria-hidden="true"></span>')
+
+
+def _var(name: str) -> str:
+    return "--ti-" + name
+
+
+_MASK_BASE = ("content:'';display:inline-block;width:1.15em;height:1.15em;margin-right:.45em;vertical-align:-.2em;"
+              "background-color:currentColor;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;"
+              "-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;")
+
+
+def _mask(name: str) -> str:
+    return f"-webkit-mask-image:var({_var(name)});mask-image:var({_var(name)});"
+
+
+def _icon_css() -> str:
+    defs = []
+    for name, inner in ICONS.items():
+        raw = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" '
+               f'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{inner}</svg>')
+        defs.append(f'{_var(name)}:url("data:image/svg+xml,{quote(raw)}");')
+    rules = [":root{" + "".join(defs) + "}"]
+    rules.append(".tic{display:inline-block;flex:none;vertical-align:-.2em;background-color:currentColor;"
+                 "-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;"
+                 "mask-position:center;-webkit-mask-size:contain;mask-size:contain;}")
+    for name in ICONS:
+        rules.append(f".ti-{name}{{{_mask(name)}}}")
+    nav = 'a[data-testid="stSidebarNavLink"]'
+    rules.append(f'{nav} p::before{{{_MASK_BASE}margin-right:.6em;}}')
+    for path, name in NAV_ICONS.items():
+        rules.append(f'{nav}[href$="/{path}"] p::before{{{_mask(name)}}}')
+    targets = ('.stElementContainer{k} button p::before', '{k} summary p::before',
+               '{k} [data-testid="stPageLink"] p::before')
+    rules.append(",".join(t.format(k='[class*="st-key-ic-"]') for t in targets) + "{" + _MASK_BASE + "}")
+    for name in ICONS:
+        k = f'[class*="st-key-ic-{name}-"]'
+        rules.append(",".join(t.format(k=k) for t in targets) + "{" + _mask(name) + "}")
+    return "<style>" + "\n".join(rules) + "</style>"
+
+
+def ic(name: str, ident: str) -> str:
+    """Key cho nút / mục mở rộng / khung để gắn icon Tabler: st.button("Lưu", key=style.ic("device-floppy", "luu_gd"))."""
+    assert name in ICONS, name
+    return f"ic-{name}-{ident}"
+
+
+def tab_icons(key: str, names: list[str]) -> None:
+    """Gắn icon cho các tab của st.tabs(..., key=key) theo thứ tự."""
+    rules = [f'.st-key-{key} [role="tab"]:nth-of-type({i}) p::before{{{_MASK_BASE}{_mask(n)}}}'
+             for i, n in enumerate(names, 1)]
+    st.html("<style>" + "".join(rules) + "</style>")
+
+
+def title(icon: str, text: str, caption: str | None = None) -> None:
+    """Tiêu đề trang kèm icon Tabler trong ô tròn xanh chanh."""
+    cap = f'<div class="pt-cap">{caption}</div>' if caption else ""
+    st.html(f'<div class="pt"><span class="pt-ic">{svg(icon, 26, "#111", 2)}</span><h1>{esc(text)}</h1></div>{cap}')
+
+
 def apply() -> None:
     """Gọi 1 lần mỗi lượt chạy, ngay sau set_page_config."""
     st.html(_CSS)
+    st.html(_icon_css())
 
 
 def esc(x) -> str:
@@ -111,12 +199,14 @@ def esc(x) -> str:
 
 
 def kpi(label: str, value: str, sub: str = "", lime: bool = False, progress: float | None = None,
-        trend: str | None = None) -> str:
+        trend: str | None = None, icon: str | None = None) -> str:
     """HTML một thẻ KPI. trend: 'up' | 'down' để tô màu dòng phụ."""
     bar = (f'<div class="bar"><div style="width:{max(0.0, min(1.0, progress)) * 100:.1f}%"></div></div>'
            if progress is not None else "")
     sub_html = f'<div class="sub {trend or ""}">{esc(sub)}</div>' if sub else ""
-    return (f'<div class="kpi"><div class="lb">{esc(label)}</div>'
+    ico = (f'<div class="ki{" lime" if lime else ""}">{svg(icon, 18, "#111" if lime else LIME)}</div>'
+           if icon else "")
+    return (f'<div class="kpi">{ico}<div class="lb">{esc(label)}</div>'
             f'<div class="v{" lime" if lime else ""}">{esc(value)}</div>{bar}{sub_html}</div>')
 
 
@@ -133,7 +223,7 @@ def steps(items: list[tuple[str, str]], start: int = 1) -> str:
 
 
 def tip(text: str) -> str:
-    return f'<div class="tip">💡 {text}</div>'
+    return f'<div class="tip">{svg("bulb", 16, LIME)} {text}</div>'
 
 
 def flow(nodes: list[tuple[str, str]], edges: list[tuple[str, str, str]] | None = None, rankdir: str = "LR",

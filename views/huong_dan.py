@@ -5,16 +5,21 @@ import streamlit as st
 from fi_app import engine, style, ui
 
 c, data, h, fp = ui.state()
-st.title("📖 Hướng dẫn sử dụng")
-st.caption("Đọc theo thứ tự các tab. Mỗi bước có nút ➜ đưa bạn tới đúng trang cần thao tác.")
+style.title("book", "Hướng dẫn sử dụng", "Đọc theo thứ tự các tab. Mỗi bước có nút mũi tên đưa bạn tới đúng trang cần thao tác.")
+
+
+_links = [0]
 
 
 def go_to(page: str, label: str):
-    st.page_link(f"views/{page}.py", label=f"➜ {label}")
+    _links[0] += 1                       # mỗi nút một key riêng (cùng trang có thể xuất hiện nhiều lần)
+    with st.container(key=style.ic("arrow-right", f"go_{_links[0]}_{page}")):
+        st.page_link(f"views/{page}.py", label=label)
 
 
-t1, t2, t3, t4, t5 = st.tabs(["🚀 Bắt đầu", "🧱 Thiết lập lần đầu", "🔁 Dùng hằng ngày", "📊 Hiểu các chỉ số",
-                              "❓ Hỏi đáp"])
+t1, t2, t3, t4, t5 = st.tabs(["Bắt đầu", "Thiết lập lần đầu", "Dùng hằng ngày", "Hiểu các chỉ số", "Hỏi đáp"],
+                             key="tabs_hd")
+style.tab_icons("tabs_hd", ["rocket", "stack-2", "repeat", "chart-donut", "help-circle"])
 
 # =====================================================================
 with t1:
@@ -72,7 +77,7 @@ with t2:
                                                    'q [label="Có file Excel v3?", shape=diamond, fillcolor="#1C1C1C"]'),
         width="content")
 
-    with st.expander("✅ Cách A – Có file Excel: nhập 1 lần là xong", expanded=False):
+    with st.expander("Cách A – Có file Excel: nhập 1 lần là xong", expanded=False, key=style.ic("file-import", "cach_a")):
         st.html(style.steps([
             ("Mở trang Sao lưu & Cài đặt", "Kéo xuống mục <b>Nhập dữ liệu từ Excel v3</b>."),
             ("Chọn file", "Bấm <b>Browse files</b> và chọn file <b>Investment_tracking_v3.xlsx</b>."),
@@ -136,20 +141,20 @@ with t2:
 with t3:
     st.subheader("Lịch sử dụng gợi ý")
     st.html('<div class="cal">'
-            '<div class="c"><div class="h">⚡ Mỗi lần mua</div><ul><li>Giao dịch → Mua DCA nhanh</li>'
+            f'<div class="c"><div class="h">{style.svg("bolt")} Mỗi lần mua</div><ul><li>Giao dịch → Mua DCA nhanh</li>'
             '<li>Chọn quỹ, nhập số tiền, Lưu</li></ul></div>'
-            '<div class="c"><div class="h">📅 Mỗi tuần</div><ul><li>Xem hộp <b>Việc cần chú ý</b></li>'
+            f'<div class="c"><div class="h">{style.svg("calendar-event")} Mỗi tuần</div><ul><li>Xem hộp <b>Việc cần chú ý</b></li>'
             '<li>Cập nhật giá vàng/BĐS nếu có</li></ul></div>'
-            '<div class="c"><div class="h">🗓️ Cuối tháng</div><ul><li>Kiểm tra Lịch sử (Snapshot tự chụp)</li>'
+            f'<div class="c"><div class="h">{style.svg("calendar-event")} Cuối tháng</div><ul><li>Kiểm tra Lịch sử (Snapshot tự chụp)</li>'
             '<li>Xem Tái cân bằng ở trang Tài sản</li><li>Tạo báo cáo Excel để lưu</li></ul></div>'
-            '<div class="c"><div class="h">🔄 Mỗi quý</div><ul><li>Rà lại Thu chi → <b>Đã rà soát hôm nay</b></li>'
+            f'<div class="c"><div class="h">{style.svg("repeat")} Mỗi quý</div><ul><li>Rà lại Thu chi → <b>Đã rà soát hôm nay</b></li>'
             '<li>Xem lại Kế hoạch FIRE</li></ul></div></div>')
 
     st.subheader("Ghi một lần mua quỹ (DCA) – 30 giây")
     l, r = st.columns([3, 2], gap="large")
     with l:
         st.html(style.steps([
-            ("Mở Giao dịch → Mua DCA nhanh", "Hoặc bấm <b>＋ Mua DCA</b> ở trang Tổng quan."),
+            ("Mở Giao dịch → Mua DCA nhanh", "Hoặc bấm <b>Mua DCA</b> ở thẻ Thao tác nhanh của trang Tổng quan."),
             ("Chọn tài sản & ngày", "Ngày mặc định là hôm nay."),
             ("Nhập số tiền", "App tự tra NAV đúng ngày và tính số chứng chỉ quỹ = Số tiền ÷ NAV (cắt 2 số lẻ). "
                              "Nếu chưa có NAV ngày đó, gõ NAV vào ô bên cạnh."),
@@ -169,14 +174,14 @@ with t3:
         "| **Cổ tức TM** | Nhận cổ tức tiền mặt | Số tiền |\n"
         "| **Cổ tức CP/Thưởng** | Nhận cổ phiếu thưởng / cổ tức bằng cổ phiếu | Số lượng |\n"
         "| **Vốn đầu kỳ** | Tài sản đã có, không rõ ngày mua | Giá vốn + Số lượng (không tính XIRR) |")
-    st.html(style.tip("Nhập sai? Vào tab <b>Lịch sử & sửa</b>, sửa trực tiếp trong bảng (hoặc chọn dòng → 🗑) rồi bấm "
+    st.html(style.tip("Nhập sai? Vào tab <b>Lịch sử & sửa</b>, sửa trực tiếp trong bảng (hoặc chọn dòng → biểu tượng thùng rác) rồi bấm "
                       "<b>Lưu thay đổi</b>."))
 
     st.subheader("Khi sổ tiết kiệm sắp đáo hạn")
     st.graphviz_chart(style.flow(
-        [("y", "🟡 Sắp đáo hạn\\n(còn ≤ 15 ngày)"), ("d", "Ngân hàng / app\\ntất toán hay tái tục?"),
+        [("y", "Sắp đáo hạn\\n(còn ≤ 15 ngày)"), ("d", "Ngân hàng / app\\ntất toán hay tái tục?"),
          ("t", "Tái tục: sửa Ngày đáo hạn,\\nGửi đầu kỳ, Lãi trước thuế"), ("x", "Tất toán: xoá sổ\\n(hoặc chuyển sang tài sản khác)"),
-         ("g", "🟢 Đang sinh lời")],
+         ("g", "Đang sinh lời")],
         edges=[("y", "d", ""), ("d", "t", "tái tục"), ("d", "x", "rút ra"), ("t", "g", "")], highlight=("g",)),
         width="stretch")
     go_to("tiet_kiem", "Tiết kiệm, Mục tiêu & Nợ")
@@ -240,7 +245,7 @@ with t5:
          "thêm email của bạn trong Supabase."),
         ("Mở lại app vẫn phải nhập mã?",
          "Khi nhập mã, giữ ô *Ghi nhớ đăng nhập (30 ngày)*. Chế độ ẩn danh/riêng tư của trình duyệt sẽ không ghi nhớ được."),
-        ("Giá không cập nhật / hiện ⚠ Giá cũ?",
+        ("Giá không cập nhật / hiện cảnh báo “Giá cũ”?",
          "Vào trang **Giá** → *Lấy giá mới nhất*. Kiểm tra cột *Nguồn giá* ở trang **Tài sản**. Quỹ mở công bố NAV "
          "chậm 1 ngày nên “giá cũ 1–2 ngày” là bình thường. Nguồn nào lỗi thì nhập giá tay."),
         ("Lần đầu mở app sau một thời gian bị chậm?",
@@ -249,7 +254,7 @@ with t5:
          "Trang **Tài sản** → thêm 1 dòng (Mã, Tên, Tầng, Nguồn giá) → *Lưu danh mục* → ghi giao dịch mua. "
          "Tài sản mới tự hiện ở mọi trang."),
         ("Nhập nhầm giao dịch?",
-         "Trang **Giao dịch** → tab *Lịch sử & sửa*: sửa trực tiếp, hoặc chọn dòng và bấm 🗑, rồi *Lưu thay đổi*."),
+         "Trang **Giao dịch** → tab *Lịch sử & sửa*: sửa trực tiếp, hoặc chọn dòng và bấm biểu tượng thùng rác, rồi *Lưu thay đổi*."),
         ("Dữ liệu của tôi có ai xem được không?",
          "Không. Mỗi tài khoản có dữ liệu riêng; cơ sở dữ liệu tự chặn mọi truy cập vào dữ liệu của người khác."),
         ("Sao lưu dữ liệu thế nào?",

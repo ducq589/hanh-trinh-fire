@@ -7,7 +7,7 @@ import streamlit as st
 from fi_app import db, engine, prices, sources, style, ui
 
 c, data, h, fp = ui.state()
-st.title("💹 Giá")
+style.title("chart-candle", "Giá")
 
 market = [r for r in h["rows"] if r["valuation"] != "Sổ tiết kiệm"]
 stale = int(engine.n(data["settings"].get("stale_days", 7)))
@@ -21,7 +21,7 @@ last_txt = f"{dt.datetime.fromisoformat(last):%H:%M %d/%m/%Y}" if last else "ch�
 st.caption(
     f"{len(auto_assets)} tài sản có nguồn giá tự động (Fmarket cho quỹ mở, VNDirect cho cổ phiếu, PNJ cho vàng – "
     f"cài ở trang **Tài sản**, cột *Nguồn giá*). App tự lấy giá khi mở (tối đa 6 giờ/lần). Lần lấy gần nhất: {last_txt}.")
-if st.button("🔄 Lấy giá mới nhất", type="primary"):
+if st.button("Lấy giá mới nhất", type="primary", key=style.ic("refresh", "laygia")):
     with st.spinner("Đang lấy giá…"):
         res = prices.fetch_auto(c)
     st.session_state["_fetch_log"] = res["log"]
@@ -40,7 +40,7 @@ day = st.date_input("Ngày giá", dt.date.today(), format="DD/MM/YYYY")
 quick = pd.DataFrame([{
     "Mã": r["code"], "Tên": r["name"], "Nguồn": r.get("price_source") or "Nhập tay",
     "Giá mới nhất": r["price"], "Ngày giá": r["price_date"],
-    "Tình trạng": ("⚠ " + r["warning"]) if r["warning"] else "✓ Mới", "Giá mới": None,
+    "Tình trạng": r["warning"] or "Mới", "Giá mới": None,
 } for r in market])
 edited = st.data_editor(quick, key="quick_px", hide_index=True, width="stretch",
                         disabled=["Mã", "Tên", "Nguồn", "Giá mới nhất", "Ngày giá", "Tình trạng"],
@@ -51,7 +51,7 @@ edited = st.data_editor(quick, key="quick_px", hide_index=True, width="stretch",
                         })
 new = edited.dropna(subset=["Giá mới"])
 new = new[new["Giá mới"] > 0]
-if st.button(f"💾 Lưu {len(new)} giá ngày {day:%d/%m/%Y}", disabled=new.empty):
+if st.button(f"Lưu {len(new)} giá ngày {day:%d/%m/%Y}", disabled=new.empty, key=style.ic("device-floppy", "luugia")):
     for _, r in new.iterrows():
         db.upsert_price(c, day, r["Mã"], float(r["Giá mới"]), "Nhập trên app", is_manual=1)
     ui.flash(f"Đã lưu {len(new)} giá ngày {day:%d/%m/%Y}")
@@ -64,11 +64,11 @@ with col1:
     st.markdown("**Nhập từ gia.csv**")
     if c.is_cloud:
         up = st.file_uploader("Chọn file gia.csv", type=["csv"], label_visibility="collapsed")
-        if up and st.button("⬇️ Nhập file đã chọn"):
+        if up and st.button("Nhập file đã chọn", key=style.ic("file-import", "nhapfile")):
             res = prices.import_csv(c, up, is_manual=0)
             ui.flash(f"gia.csv: {res['rows']} dòng, thêm {res['added']}, cập nhật {res['updated']}")
             st.rerun()
-    elif st.button("⬇️ Nhập giá từ gia.csv"):
+    elif st.button("Nhập giá từ gia.csv", key=style.ic("file-import", "nhapcsv")):
         res = prices.import_csv(c, prices.GIA_CSV, is_manual=0)
         ui.flash(f"gia.csv: {res['rows']} dòng, thêm {res['added']}, cập nhật {res['updated']}"
                  + (f", {len(res['errors'])} dòng lỗi" if res["errors"] else ""))
@@ -76,8 +76,8 @@ with col1:
 with col2:
     st.markdown("**Xuất ra gia.csv** – để file Excel v3 bấm *Refresh All* là có giá mới.")
     if c.is_cloud:
-        st.download_button("⬆️ Tải gia.csv", prices.csv_bytes(c), file_name="gia.csv", mime="text/csv")
-    elif st.button("⬆️ Xuất giá ra gia.csv"):
+        st.download_button("Tải gia.csv", prices.csv_bytes(c), file_name="gia.csv", mime="text/csv", key=style.ic("download", "taicsv"))
+    elif st.button("Xuất giá ra gia.csv", key=style.ic("file-export", "xuatcsv")):
         res = prices.export_csv(c)
         ui.flash(f"Đã ghi {res['rows']} dòng vào gia.csv (bản cũ đã được sao lưu)")
         st.rerun()
@@ -106,7 +106,7 @@ with st.expander("Giá đã nhập tay (sửa/xoá)"):
                        "price": st.column_config.NumberColumn("Giá", format="localized"), "source": "Nguồn"})
     ch = st.session_state.get("man_px", {})
     if ch.get("edited_rows") or ch.get("deleted_rows"):
-        if st.button("💾 Lưu thay đổi giá tay"):
+        if st.button("Lưu thay đổi giá tay", key=style.ic("device-floppy", "luugiatay")):
             with c.tx():
                 for i, chg in ch.get("edited_rows", {}).items():
                     r = man.iloc[int(i)]

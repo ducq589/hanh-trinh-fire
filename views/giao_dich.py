@@ -3,17 +3,18 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from fi_app import db, engine, ui
+from fi_app import db, engine, style, ui
 
 c, data, h, fp = ui.state()
-st.title("🧾 Giao dịch")
+style.title("receipt", "Giao dịch")
 
 market = [a for a in data["assets"] if a["valuation"] != "Sổ tiết kiệm"]
 codes = [a["code"] for a in market]
 names = {a["code"]: f"{a['code']} – {a['name']}" for a in market}
 book = h["book"]
 
-tab_dca, tab_other, tab_hist = st.tabs(["⚡ Mua DCA nhanh", "➕ Giao dịch khác", "📋 Lịch sử & sửa"])
+tab_dca, tab_other, tab_hist = st.tabs(["Mua DCA nhanh", "Giao dịch khác", "Lịch sử & sửa"], key="tabs_gd")
+style.tab_icons("tabs_gd", ["bolt", "plus", "history"])
 
 # --------------------------------------------------------------- DCA
 with tab_dca:
@@ -33,7 +34,7 @@ with tab_dca:
     elif amount and not use_price:
         st.warning(f"Chưa có giá {code} ngày {day:%d/%m/%Y}. Nhập giá/NAV ở ô bên cạnh, "
                    "hoặc cập nhật giá ở trang **Giá** trước.")
-    if st.button("Lưu giao dịch mua", type="primary", disabled=not (amount and use_price)):
+    if st.button("Lưu giao dịch mua", type="primary", disabled=not (amount and use_price), key=style.ic("device-floppy", "luudca")):
         db.add_transaction(c, day, code, "Mua", amount=amount, price=price or None)
         if price and not nav_found:
             db.upsert_price(c, day, code, price, "Nhập khi mua (app)", is_manual=1)
@@ -60,7 +61,7 @@ with tab_other:
         t_note = c9.text_input("Ghi chú")
         st.caption("Mua/Bán cổ phiếu: nhập Giá + Số lượng (+ Phí, Thuế khi bán). · Cổ tức TM: Số tiền. · "
                    "Cổ tức CP/Thưởng: Số lượng. · Vốn đầu kỳ: tài sản có sẵn, không rõ ngày mua (không tính XIRR).")
-        if st.form_submit_button("Lưu giao dịch", type="primary"):
+        if st.form_submit_button("Lưu giao dịch", type="primary", key=style.ic("device-floppy", "luukhac")):
             held = next((r["qty"] for r in h["rows"] if r["code"] == t_code), 0) or 0
             err = None
             if not (t_amount or t_qty):
@@ -92,7 +93,7 @@ with tab_hist:
         "note": t["note"], "SL tính": derived[t["id"]]["qty_calc"], "Dòng tiền": derived[t["id"]]["cashflow"],
     } for t in reversed(txs)], columns=["id", "date", "code", "type", "amount", "price", "qty", "fee", "tax",
                                         "note", "SL tính", "Dòng tiền"])
-    st.caption(f"{len(df)} giao dịch. Sửa trực tiếp trong bảng; chọn dòng rồi bấm 🗑 để xoá; bấm **Lưu thay đổi** để ghi.")
+    st.caption(f"{len(df)} giao dịch. Sửa trực tiếp trong bảng; chọn dòng rồi bấm biểu tượng thùng rác để xoá; bấm **Lưu thay đổi** để ghi.")
     st.data_editor(df, key="tx_editor", hide_index=True, width="stretch", num_rows="dynamic",
                    disabled=["id", "SL tính", "Dòng tiền"], column_config={
                        "id": None,
@@ -113,7 +114,7 @@ with tab_hist:
         ok = True
         if n_del:
             ok = st.checkbox(f"Tôi xác nhận xoá {n_del} giao dịch (đã có bản sao lưu tự động hằng ngày)")
-        if st.button("💾 Lưu thay đổi", type="primary", disabled=not ok):
+        if st.button("Lưu thay đổi", type="primary", disabled=not ok, key=style.ic("device-floppy", "luugd")):
             e, a, x = ui.save_editor(c, "transactions", "id", df, "tx_editor",
                                      ["date", "code", "type", "amount", "price", "qty", "fee", "tax", "note"])
             ui.flash(f"Đã lưu: sửa {e}, thêm {a}, xoá {x} giao dịch")

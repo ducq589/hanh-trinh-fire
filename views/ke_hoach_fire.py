@@ -5,7 +5,7 @@ import streamlit as st
 from fi_app import db, engine, style, ui
 
 c, data, h, fp = ui.state()
-st.title("🔥 Kế hoạch FIRE")
+style.title("flame", "Kế hoạch FIRE")
 st.caption("FIRE – Financial Independence, Retire Early. Số liệu dự phóng tính theo **sức mua hôm nay** "
            "(đã trừ lạm phát). Các giả định chỉ là tham số để lập kế hoạch, không phải khuyến nghị đầu tư.")
 
@@ -13,7 +13,7 @@ if not fp["cf"]["expense"]:
     st.warning("Chưa có dữ liệu chi tiêu – hãy khai ở trang **Thu chi** để tính kế hoạch FIRE.")
 
 # --------------------------------------------------------------- assumptions
-with st.expander("⚙️ Giả định", expanded=False):
+with st.expander("Giả định", expanded=False, key=style.ic("adjustments", "giadinh")):
     a = data["assumptions"]
     with st.form("assump"):
         c1, c2, c3 = st.columns(3)
@@ -28,7 +28,7 @@ with st.expander("⚙️ Giả định", expanded=False):
         swr = c5.number_input("Tỷ lệ rút an toàn SWR (%)", 1.0, 10.0, fp["swr"] * 100, 0.1,
                               help="Quy tắc 4%. Thận trọng hơn 3–3,5% nếu nghỉ sớm, thời gian rút dài.")
         em = c6.number_input("Quỹ khẩn cấp mục tiêu (tháng chi thiết yếu)", 1, 24, int(fp["emergency_target"]))
-        if st.form_submit_button("Lưu giả định", type="primary"):
+        if st.form_submit_button("Lưu giả định", type="primary", key=style.ic("device-floppy", "luugiadinh")):
             db.set_kv(c, "assumptions", {"current_age": age or "", "target_age": tgt, "inflation": infl / 100,
                                          "return_nominal": "" if auto else ret / 100, "swr": swr / 100,
                                          "emergency_months": em})

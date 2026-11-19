@@ -3,14 +3,15 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from fi_app import db, engine, ui
+from fi_app import db, engine, style, ui
 
 c, data, h, fp = ui.state()
-st.title("🏦 Tiết kiệm, Mục tiêu & Nợ")
+style.title("building-bank", "Tiết kiệm, Mục tiêu & Nợ")
 
 sav_codes = [a["code"] for a in data["assets"] if a["valuation"] == "Sổ tiết kiệm"]
 goal_names = [g["name"] for g in data["goals"]]
-tab_s, tab_g, tab_n = st.tabs(["Sổ tiết kiệm", "Mục tiêu (Sinking Fund)", "Nợ phải trả"])
+tab_s, tab_g, tab_n = st.tabs(["Sổ tiết kiệm", "Mục tiêu (Sinking Fund)", "Nợ phải trả"], key="tabs_tk")
+style.tab_icons("tabs_tk", ["pig-money", "target", "coin"])
 
 # --------------------------------------------------------------- savings
 with tab_s:
@@ -22,10 +23,10 @@ with tab_s:
 
     # ---- tổng quan: tô màu cả dòng theo trạng thái, sắp theo ngày đáo hạn
     STATUS = {  # trạng thái → (biểu tượng, nền dòng, màu chữ)
-        "Quá hạn xử lý": ("🔴", "rgba(255,122,107,0.20)", "#FFC2B8"),
-        "Sắp đáo hạn": ("🟡", "rgba(255,209,102,0.17)", "#FFE3A3"),
-        "Đang sinh lời": ("🟢", "rgba(182,243,106,0.07)", "#E3F8C8"),
-        "": ("⚪", "transparent", "#D9D9D9"),
+        "Quá hạn xử lý": ("●", "rgba(255,122,107,0.20)", "#FF8A7A"),
+        "Sắp đáo hạn": ("●", "rgba(255,209,102,0.17)", "#FFD166"),
+        "Đang sinh lời": ("●", "rgba(182,243,106,0.07)", "#B6F36A"),
+        "": ("●", "transparent", "#D9D9D9"),
     }
     today = dt.date.today()
     sv = sorted(h["savings"], key=lambda s: (s["maturity_d"] is None, s["maturity_d"] or today))
@@ -64,7 +65,7 @@ with tab_s:
                           (pd.DataFrame(h["savings"]).groupby("code")["received"].sum().items()
                            if h["savings"] else [])))
 
-    with st.expander("✏️ Sửa / thêm / xoá sổ tiết kiệm"):
+    with st.expander("Sửa / thêm / xoá sổ tiết kiệm", key=style.ic("edit", "suaso")):
         df = pd.DataFrame([{
             "id": s["id"], "name": s["name"], "code": s["code"], "goal": s["goal"] or "", "purpose": s["purpose"] or "",
             "maturity": engine.to_date(s["maturity"]), "principal": s["principal"], "topup": s["topup"],
@@ -73,9 +74,10 @@ with tab_s:
             "Trạng thái": f'{STATUS[derived[s["id"]]["status"]][0]} {derived[s["id"]]["status"]}',
         } for s in data["savings"]], columns=["id", "name", "code", "goal", "purpose", "maturity", "principal", "topup",
                                               "start_balance", "interest_gross", "Nhận cuối kỳ", "Tăng trưởng", "Trạng thái"])
-        _clr = {v[0]: v for v in STATUS.values()}
-        styled = df.style.map(lambda v: (f"background-color:{_clr[str(v)[:1]][1]};color:{_clr[str(v)[:1]][2]}"
-                                         if str(v)[:1] in _clr else ""), subset=["Trạng thái"])
+        def _cell(v):
+            st_ = str(v)[2:]
+            return f"background-color:{STATUS[st_][1]};color:{STATUS[st_][2]}" if st_ in STATUS else ""
+        styled = df.style.map(_cell, subset=["Trạng thái"])
         st.data_editor(styled, key="sav_ed", hide_index=True, width="stretch", num_rows="dynamic",
                        disabled=["id", "Nhận cuối kỳ", "Tăng trưởng", "Trạng thái"], column_config={
                            "id": None,
@@ -94,7 +96,7 @@ with tab_s:
         if ui.has_changes("sav_ed"):
             n_del = len(st.session_state["sav_ed"].get("deleted_rows", []))
             ok = st.checkbox(f"Xác nhận xoá {n_del} sổ") if n_del else True
-            if st.button("💾 Lưu sổ tiết kiệm", type="primary", disabled=not ok):
+            if st.button("Lưu sổ tiết kiệm", type="primary", disabled=not ok, key=style.ic("device-floppy", "luuso")):
                 e, a, x = ui.save_editor(c, "savings", "id", df, "sav_ed",
                                          ["name", "code", "goal", "purpose", "maturity", "principal", "topup",
                                           "start_balance", "interest_gross"])
@@ -125,7 +127,7 @@ with tab_g:
     for g in h["goals"]:
         if engine.n(g["target"]):
             st.progress(min(1.0, g["have"] / g["target"]), text=f"{g['name']}: {ui.pct(g['have'] / g['target'])}")
-    if ui.has_changes("goal_ed") and st.button("💾 Lưu mục tiêu", type="primary"):
+    if ui.has_changes("goal_ed") and st.button("Lưu mục tiêu", type="primary", key=style.ic("device-floppy", "luumt")):
         e, a, x = ui.save_editor(c, "goals", "id", gdf, "goal_ed", ["name", "target", "due_date"])
         ui.flash(f"Mục tiêu: sửa {e}, thêm {a}, xoá {x}")
         st.rerun()
@@ -155,7 +157,7 @@ with tab_n:
             r["rate"] = r["rate"] / 100
         return r
 
-    if ui.has_changes("debt_ed") and st.button("💾 Lưu khoản nợ", type="primary"):
+    if ui.has_changes("debt_ed") and st.button("Lưu khoản nợ", type="primary", key=style.ic("device-floppy", "luuno")):
         e, a, x = ui.save_editor(c, "liabilities", "id", ndf, "debt_ed",
                                  ["name", "balance", "rate", "monthly_payment", "end_date", "note"], transform=_rate)
         ui.flash(f"Nợ: sửa {e}, thêm {a}, xoá {x}")

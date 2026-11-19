@@ -123,13 +123,14 @@ def login_screen(cfg: dict) -> None:
                 "<div style='height:6vh'></div>", unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 2, 1])
     with mid:
-        st.title("🔥 Hành trình FIRE")
+        from . import style as _s
+        _s.title("flame", "Hành trình FIRE")
         st.caption("Đăng nhập bằng email – không cần mật khẩu. Mã 6 số sẽ được gửi vào hộp thư của bạn.")
         step = st.session_state.get("_login_step", "email")
         if step == "email":
             with st.form("login_email"):
                 email = st.text_input("Email", placeholder="ban@example.com").strip().lower()
-                if st.form_submit_button("Gửi mã đăng nhập", type="primary", width="stretch"):
+                if st.form_submit_button("Gửi mã đăng nhập", type="primary", width="stretch", key=_s.ic("mail", "guima")):
                     if not EMAIL_RE.match(email):
                         st.error("Email không hợp lệ.")
                     else:
@@ -147,7 +148,7 @@ def login_screen(cfg: dict) -> None:
                 code = st.text_input("Mã đăng nhập (6 số)", max_chars=10)
                 remember = st.checkbox(f"Ghi nhớ đăng nhập trên thiết bị này ({REMEMBER_DAYS} ngày)", value=True,
                                        help="Bỏ chọn nếu đang dùng máy tính/điện thoại của người khác.")
-                if st.form_submit_button("Đăng nhập", type="primary", width="stretch"):
+                if st.form_submit_button("Đăng nhập", type="primary", width="stretch", key=_s.ic("login", "dangnhap")):
                     auth, err = verify_code(cfg, email, code)
                     if err:
                         st.error(err)
@@ -158,7 +159,7 @@ def login_screen(cfg: dict) -> None:
                         if remember and auth.get("refresh_token"):
                             _queue_cookie(auth["refresh_token"])
                         st.rerun()
-            if st.button("← Dùng email khác / gửi lại mã"):
+            if st.button("Dùng email khác / gửi lại mã", key=_s.ic("arrow-left", "doiemail")):
                 st.session_state["_login_step"] = "email"
                 st.rerun()
         st.caption("Dữ liệu của mỗi tài khoản được tách riêng; người khác không xem được dữ liệu của bạn.")

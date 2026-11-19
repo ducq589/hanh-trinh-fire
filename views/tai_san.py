@@ -1,10 +1,10 @@
 import pandas as pd
 import streamlit as st
 
-from fi_app import db, ui
+from fi_app import db, style, ui
 
 c, data, h, fp = ui.state()
-st.title("🗂️ Danh mục tài sản")
+style.title("briefcase", "Danh mục tài sản")
 
 st.subheader("Danh sách tài sản")
 st.caption("Thêm tài sản mới = thêm 1 dòng ở cuối bảng. **Mã** ngắn, không dấu cách, không trùng (VD: DCBF, FPT, VANGNHAN). "
@@ -60,7 +60,7 @@ if ui.has_changes("assets_ed"):
         st.error(f"Không xoá được {', '.join(blocked)}: đã có giao dịch/sổ tiết kiệm. Hãy xoá các giao dịch trước.")
     elif dup:
         st.error(f"Mã đã tồn tại: {', '.join(dup)}")
-    elif st.button("💾 Lưu danh mục", type="primary"):
+    elif st.button("Lưu danh mục", type="primary", key=style.ic("device-floppy", "luudm")):
         e, a, x = ui.save_editor(c, "assets", "code", df, "assets_ed",
                                  ["name", "type", "tier", "fire_include", "exp_return", "target_weight",
                                   "valuation", "price_source", "unit", "note", "sort_order"], transform=_tx)

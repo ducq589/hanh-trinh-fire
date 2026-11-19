@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from fi_app import db, engine, ui
+from fi_app import db, engine, style, ui
 
 c, data, h, fp = ui.state()
 st.title("🔥 Kế hoạch FIRE")
@@ -88,18 +88,18 @@ proj = pd.DataFrame(cur["projection"])
 horizon = st.slider("Số năm hiển thị", 5, 40, min(40, int(cur["years_full"] or 30) + 8))
 proj = proj[proj["k"] < horizon]
 fig = go.Figure()
-fig.add_trace(go.Scatter(x=proj["year"], y=proj["assets"] / 1e9, name="Tài sản FIRE", line=dict(color="#2E75B6", width=3),
-                         fill="tozeroy", fillcolor="rgba(46,117,182,0.12)", hovertemplate="%{y:.2f} tỷ"))
+fig.add_trace(go.Scatter(x=proj["year"], y=proj["assets"] / 1e9, name="Tài sản FIRE", line=dict(color=style.LIME, width=3),
+                         fill="tozeroy", fillcolor="rgba(182,243,106,0.10)", hovertemplate="%{y:.2f} tỷ"))
 fig.add_trace(go.Scatter(x=proj["year"], y=proj["full"] / 1e9, name="Mục tiêu Full FIRE",
-                         line=dict(color="#C0392B", dash="dash"), hovertemplate="%{y:.2f} tỷ"))
+                         line=dict(color=style.TARGET_FULL, dash="dash"), hovertemplate="%{y:.2f} tỷ"))
 fig.add_trace(go.Scatter(x=proj["year"], y=proj["lean"] / 1e9, name="Mục tiêu Lean FIRE",
-                         line=dict(color="#F2A93B", dash="dot"), hovertemplate="%{y:.2f} tỷ"))
+                         line=dict(color=style.TARGET_LEAN, dash="dot"), hovertemplate="%{y:.2f} tỷ"))
 if cur["year_full"] and cur["year_full"] <= proj["year"].max():
-    fig.add_vline(x=cur["year_full"], line=dict(color="#00A389", dash="dot"),
+    fig.add_vline(x=cur["year_full"], line=dict(color="#8A8A8A", dash="dot"),
                   annotation_text=f"Full FIRE {cur['year_full']}", annotation_position="top left")
 fig.update_layout(height=420, margin=dict(t=30, b=10), hovermode="x unified",
                   legend=dict(orientation="h", y=-0.15), yaxis_title="tỷ ₫ (sức mua hôm nay)")
-st.plotly_chart(fig, width="stretch")
+st.plotly_chart(style.fig(fig).update_layout(margin=dict(t=30)), width="stretch")
 with st.expander("Bảng dự phóng"):
     st.dataframe(pd.DataFrame({
         "Năm": proj["year"], "Tuổi": proj["age"], "Tài sản FIRE": proj["assets"].map(ui.vnd),

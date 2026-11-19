@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from fi_app import db, engine, ui
+from fi_app import db, engine, style, ui
 
 c, data, h, fp = ui.state()
 st.title("💰 Hồ sơ thu chi")
@@ -60,7 +60,7 @@ g = pd.DataFrame([("Chi thiết yếu", cf["essential"]), ("Chi linh hoạt", cf
                   ("Đầu tư định kỳ", cf["invest"]), ("Còn lại", max(0.0, cf["after_invest"]))],
                  columns=["Khoản", "Số tiền"])
 fig = px.bar(g, x="Số tiền", y=["Thu nhập"] * len(g), color="Khoản", orientation="h",
-             color_discrete_sequence=["#C0392B", "#F2A93B", "#2E75B6", "#00A389"], labels={"y": ""})
+             color_discrete_sequence=["#FF7A6B", "#FFD166", "#B6F36A", "#5DC23A"], labels={"y": ""})
 fig.update_layout(height=170, margin=dict(t=10, b=10), barmode="stack", legend=dict(orientation="h", y=-0.4),
                   xaxis_tickformat=",.0f")
-st.plotly_chart(fig, width="stretch")
+st.plotly_chart(style.fig(fig).update_layout(legend=dict(y=-0.4)), width="stretch")

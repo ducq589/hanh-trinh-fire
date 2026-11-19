@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from fi_app import db, engine, ui
+from fi_app import db, engine, style, ui
 
 c, data, h, fp = ui.state()
 st.title("📈 Lịch sử tài sản ròng")
@@ -22,14 +22,14 @@ if snaps.empty:
 snaps["date"] = pd.to_datetime(snaps["date"])
 fig = go.Figure()
 fig.add_trace(go.Scatter(x=snaps["date"], y=snaps["net_worth"], name="Tài sản ròng", mode="lines+markers",
-                         line=dict(color="#1F3864", width=3)))
+                         line=dict(color=style.TEXT, width=3)))
 fig.add_trace(go.Scatter(x=snaps["date"], y=snaps["fire_assets"], name="Tài sản tính FIRE", mode="lines+markers",
-                         line=dict(color="#2E75B6")))
+                         line=dict(color=style.LIME, width=3)))
 if snaps["fire_number"].notna().any():
-    fig.add_trace(go.Scatter(x=snaps["date"], y=snaps["fire_number"], name="Số FIRE", line=dict(color="#C0392B", dash="dash")))
+    fig.add_trace(go.Scatter(x=snaps["date"], y=snaps["fire_number"], name="Số FIRE", line=dict(color=style.TARGET_FULL, dash="dash")))
 fig.update_layout(height=400, margin=dict(t=10, b=10), hovermode="x unified", yaxis_tickformat=",.0f",
                   legend=dict(orientation="h", y=-0.15))
-st.plotly_chart(fig, width="stretch")
+st.plotly_chart(style.fig(fig), width="stretch")
 if len(snaps) == 1:
     st.caption("Mới có 1 điểm dữ liệu – biểu đồ sẽ rõ dần sau mỗi tháng.")
 

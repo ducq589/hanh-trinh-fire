@@ -4,9 +4,34 @@ headless = true
 [browser]
 gatherUsageStats = false
 
-[theme]
-primaryColor = "#2E75B6"
-font = "sans serif"
-
 [client]
 toolbarMode = "minimal"
+
+# ---------------------------------------------------------------- giao diện tối, điểm nhấn xanh chanh
+[theme]
+base = "dark"
+primaryColor = "#B6F36A"
+backgroundColor = "#141414"
+secondaryBackgroundColor = "#242424"
+textColor = "#F2F2F2"
+linkColor = "#B6F36A"
+borderColor = "#2E2E2E"
+showWidgetBorder = false
+baseRadius = "14px"
+buttonRadius = "999px"
+font = "Be Vietnam Pro:https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap"
+headingFont = "Be Vietnam Pro:https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+metricValueFontWeight = 600
+greenColor = "#9BE15D"
+redColor = "#FF7A6B"
+dataframeHeaderBackgroundColor = "#1C1C1C"
+dataframeBorderColor = "#2A2A2A"
+chartCategoricalColors = ["#B6F36A", "#5DC23A", "#2F7A2A", "#E8F9D2", "#8FD96B", "#4C9F38", "#C9F79A", "#1F5A1C"]
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#0F0F0F"
+secondaryBackgroundColor = "#1E1E1E"
+textColor = "#D9D9D9"
+borderColor = "#2A2A2A"

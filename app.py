@@ -5,9 +5,10 @@
 """
 import streamlit as st
 
-from fi_app import auth, db, engine, prices, ui
+from fi_app import auth, db, engine, prices, style, ui
 
 st.set_page_config(page_title="Hành trình FIRE", page_icon="🔥", layout="wide")
+style.apply()
 
 store = ui.store()          # cloud: hiện màn hình đăng nhập nếu chưa đăng nhập
 
@@ -28,10 +29,12 @@ if not st.session_state.get("_startup_done"):
         db.save_snapshot(store, engine.snapshot(data, h, fp, note="Tự động đầu tháng"))
         st.toast("Đã tự chụp Snapshot tài sản tháng này", icon="📸")
 
-if store.is_cloud:
-    with st.sidebar:
-        st.caption(f"👤 {store.email}")
+with st.sidebar:
+    if store.is_cloud:
+        st.html(style.hello(ui.display_name(store.email), "Xin chào!"))
         st.button("Đăng xuất", width="stretch", on_click=lambda: (store.close(), auth.logout(ui.cloud_config())))
+    else:
+        st.html(style.hello("Bản trên máy", "Xin chào!"))
 
 pages = {
     "Theo dõi": [

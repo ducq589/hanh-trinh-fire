@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from fi_app import db, engine, prices, sources, ui
+from fi_app import db, engine, prices, sources, style, ui
 
 c, data, h, fp = ui.state()
 st.title("💹 Giá")
@@ -94,7 +94,7 @@ if not hist.empty:
         hist["Giá"] = hist.groupby("Mã")["Giá"].transform(lambda s: s / s.iloc[0] * 100)
     fig = px.line(hist, x="Ngày", y="Giá", color="Mã", labels={"Giá": "Chỉ số (gốc 100)" if normalize else "Giá (₫)"})
     fig.update_layout(height=380, margin=dict(t=10, b=10), legend=dict(orientation="h", y=-0.2))
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(style.fig(fig), width="stretch")
 
 with st.expander("Giá đã nhập tay (sửa/xoá)"):
     man = pd.DataFrame([p for p in data["prices"] if p["is_manual"] == 1],

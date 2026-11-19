@@ -9,7 +9,12 @@ import streamlit as st
 
 from . import db, engine, importer
 
-PALETTE = {"Tăng trưởng": "#2E75B6", "Thu nhập": "#00A389", "Bảo vệ": "#F2A93B", "Phòng thủ": "#8E6BBF"}
+from .style import TIER_COLORS as PALETTE  # noqa: E402  (màu theo tầng tháp)
+
+
+def display_name(email: str | None) -> str:
+    """Tên hiển thị từ email: 'quangduc589@gmail.com' → 'quangduc589'."""
+    return (email or "").split("@")[0] or "bạn"
 
 
 # ---------------------------------------------------------------- data access

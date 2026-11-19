@@ -72,7 +72,7 @@ rows = pd.DataFrame(h["rows"])
 st.dataframe(pd.DataFrame({
     "Mã": rows["code"], "Số lượng": rows["qty"], "Vốn thuần": rows["cost"], "Cổ tức": rows["dividends"],
     "Ngày giá": rows["price_date"], "Giá mới nhất": rows["price"], "Giá trị": rows["value"],
-    "Lãi/lỗ": rows["pnl"], "% Lãi/lỗ": rows["pnl_pct"] * 100, "XIRR (%)": pd.to_numeric(rows["xirr"], errors="coerce") * 100,
+    "Lãi/lỗ": rows["pnl"], "% Lãi/lỗ": rows["pnl_pct"] * 100, "XIRR": rows["xirr"].map(lambda x: ui.pct(x, 2)),
     "Tính FIRE": rows["fire_value"],
 }), hide_index=True, width="stretch", column_config={
     "Số lượng": st.column_config.NumberColumn(format="%.2f"),
@@ -80,7 +80,6 @@ st.dataframe(pd.DataFrame({
        for k in ("Vốn thuần", "Cổ tức", "Giá mới nhất", "Giá trị", "Lãi/lỗ", "Tính FIRE")},
     "Ngày giá": st.column_config.DateColumn(format="DD/MM/YYYY"),
     "% Lãi/lỗ": st.column_config.NumberColumn(format="%.1f%%"),
-    "XIRR (%)": st.column_config.NumberColumn(format="%.2f%%"),
 })
 st.caption("Vốn thuần = tiền mua (gồm phí) − tiền bán thu về. Lãi/lỗ = Giá trị − Vốn thuần + Cổ tức tiền mặt. "
            "XIRR không tính cho tài sản có dòng 'Vốn đầu kỳ'.")

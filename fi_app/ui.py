@@ -39,6 +39,9 @@ def store() -> db.Store:
         return s
     from . import auth
     a = st.session_state.get("auth")
+    if not a and auth.restore(cfg):           # ghi nhớ đăng nhập (cookie)
+        a = st.session_state.get("auth")
+    auth.flush_cookie()
     if not a:
         auth.login_screen(cfg)
         st.stop()

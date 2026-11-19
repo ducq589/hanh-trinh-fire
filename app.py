@@ -31,7 +31,7 @@ if not st.session_state.get("_startup_done"):
 if store.is_cloud:
     with st.sidebar:
         st.caption(f"👤 {store.email}")
-        st.button("Đăng xuất", width="stretch", on_click=lambda: (store.close(), auth.logout()))
+        st.button("Đăng xuất", width="stretch", on_click=lambda: (store.close(), auth.logout(ui.cloud_config())))
 
 pages = {
     "Theo dõi": [

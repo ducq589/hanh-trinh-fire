@@ -26,3 +26,19 @@ def test_budget_check_no_income():
 def test_overcommitted_invest_does_not_reduce_saving():
     b = engine.budget_check(_cf([("Thu nhập chủ động", 10e6), ("Chi thiết yếu", 8e6), ("Đầu tư định kỳ", 4e6)]))
     assert round(b["save"], 4) == 0.40            # phần dư âm không trừ thêm
+
+
+def test_emergency_plan_example():
+    p = engine.emergency_plan(6.3e6, 0, "Độc thân", "Không ai", False, 6e6)
+    assert p["months"] == 6 and round(p["target"]) == 37_800_000
+    assert p["months_to_goal"] == 7                      # 37,8 tr / 6 tr = 6,3 → 7 tháng
+    assert engine.emergency_plan(6.3e6, 0, "Độc thân", "3–4 người", True, 0)["months"] == 21
+    assert engine.emergency_plan(6.3e6, 0, "Độc thân", "Không ai", False, 0)["months_to_goal"] is None
+    done = engine.emergency_plan(5e6, 20e6, "Vợ chồng đều có thu nhập", "Không ai", False, 1e6)
+    assert done["gap"] == 0 and done["months_to_goal"] == 0 and done["progress"] == 1.0
+
+
+def test_ladder_sums_to_total():
+    for scheme in engine.LADDERS:
+        parts = engine.ladder(100e6, scheme)
+        assert round(sum(a for _, _, a in parts)) == 100_000_000

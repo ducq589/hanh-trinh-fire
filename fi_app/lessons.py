@@ -184,3 +184,142 @@ def render(cf: dict) -> None:
         _apply("weeks")
         with st.container(key=style.ic("arrow-right", "ls_go_fire")):
             st.page_link("views/ke_hoach_fire.py", label="Xem Kế hoạch FIRE", width="stretch")
+
+
+# =====================================================================  BÀI HỌC: QUỸ KHẨN CẤP (trang Tiết kiệm)
+EM_WHAT = [  # (icon, tiêu đề, mô tả)
+    ("alert-triangle", "Quỹ khẩn cấp là gì?",
+     "Khoản tiền để dành riêng, <b>chỉ dùng khi có chuyện bất ngờ</b>: ốm đau, nằm viện, sửa xe, sửa nhà, "
+     "mất việc hay mất thu nhập (như nhiều người đã gặp thời Covid)."),
+    ("building-bank", "Vì sao phải để riêng?",
+     "Để chung với tiền tiêu hằng ngày thì rất dễ lỡ tay tiêu mất. Nên mở <b>một tài khoản riêng</b> chỉ cho khoản này."),
+    ("coin", "Giữ thêm ít tiền mặt",
+     "Luôn có một ít tiền mặt trong ví hoặc ở nhà – gặp việc gấp ngoài đường không phải động tới quỹ."),
+]
+
+EM_SIZE_TABLE = """
+| Hoàn cảnh | Không ai phụ thuộc | 1–2 người phụ thuộc | 3–4 người phụ thuộc |
+|---|---|---|---|
+| Độc thân | 6 tháng | 12 tháng | 18 tháng |
+| Vợ chồng đều có thu nhập | 3 tháng | 6 tháng | 12 tháng |
+"""
+EM_SIZE_NOTE = ("Tính theo <b>chi tiêu bắt buộc</b> (tiền nhà, ăn uống, điện nước, bảo hiểm…) – không tính mua sắm, du lịch. "
+                "<b>Người phụ thuộc</b> là người sống nhờ thu nhập của bạn: con đang đi học, bố mẹ không còn đi làm và "
+                "không có lương hưu. Làm tự do hay tự kinh doanh thì nên để nhiều hơn vì thu nhập thất thường.")
+
+EM_FIRST = [  # (icon, tiêu đề, mô tả)
+    ("user", "Mới ra trường, còn ở với bố mẹ",
+     "Để dành <b>1–2 tháng chi tiêu</b> là đủ bước đầu, sau đó vừa đầu tư vừa để dành tiếp cho đủ quỹ."),
+    ("home", "Đã có gia đình / nhiều trách nhiệm",
+     "Làm <b>quỹ khẩn cấp trước</b>. Đã đầu tư nhiều mà chưa có quỹ thì nên tạm dừng đầu tư để bổ sung – vì chuyện "
+     "xui thường đến cùng lúc: kinh tế khó dễ mất việc, đúng lúc khoản đầu tư đang lỗ, phải bán ra là thiệt."),
+]
+
+EM_WHERE_RULES = [
+    "<b>Rút được nhanh</b> – trong vòng 24 giờ.",
+    "<b>An toàn</b> – không mất tiền gốc.",
+    "<b>Lãi cao hơn trượt giá</b> – tiền nằm im 5 năm thì 10 triệu bây giờ chỉ còn sức mua khoảng 8 triệu.",
+]
+EM_WHERE = [  # (icon, tiêu đề, mô tả)
+    ("pig-money", "Tiết kiệm có kỳ hạn ở ngân hàng",
+     "<b>+</b> An toàn, lãi kỳ hạn tốt hơn hẳn.<br><b>−</b> Rút trước hạn mất lãi – nên chia nhiều sổ (bên dưới). "
+     "Không nên để ở tài khoản <b>không kỳ hạn</b> vì lãi chỉ khoảng 0,1%/năm."),
+    ("chart-line", "Quỹ trái phiếu",
+     "<b>+</b> Mua từng ít một (vài chục nghìn mỗi tuần), rút ra không mất lãi đã tích luỹ."
+     "<br><b>−</b> Giá có thể lên xuống (cuối năm 2022 có quỹ giảm khoảng 20%), có thể mất phí mua/bán – "
+     "chỉ nên giữ <b>một phần</b> quỹ khẩn cấp ở đây."),
+]
+
+EM_LADDER_NOTE = ("Khi có chuyện gấp thường chỉ cần khoảng <b>10–20%</b> quỹ. Chia thành nhiều sổ với kỳ hạn khác nhau, "
+                  "sổ nào đến hạn thì gửi tiếp: vẫn hưởng lãi cao mà lúc cần vẫn có tiền rút ngay.")
+
+EM_APPLY = {
+    "what": "App tính quỹ khẩn cấp từ tài sản có mã <b>QKC</b>. Tạo tài sản này ở trang <b>Tài sản</b> (loại Tiết kiệm/"
+            "Tiền mặt) hoặc gán các sổ dành cho quỹ vào mã QKC ở tab <b>Sổ tiết kiệm</b>.",
+    "size": "Số tháng tính ở trên có thể đặt làm <b>mục tiêu quỹ khẩn cấp</b> – app dùng nó ở bảng "
+            "Sức khoẻ tài chính và mốc thành tựu <i>Quỹ khẩn cấp đủ</i>.",
+    "first": "Bảng <b>Sức khoẻ tài chính</b> ở trang Kế hoạch FIRE cho biết quỹ hiện đủ bao nhiêu tháng và còn thiếu bao nhiêu.",
+    "ladder": "Mỗi phần là một dòng ở tab <b>Sổ tiết kiệm</b> phía trên (mã QKC) – app nhắc khi sổ sắp đáo hạn để bạn gửi tiếp.",
+}
+
+
+def _em_calculator(c, data: dict, fp: dict) -> None:
+    from . import db
+    essential = fp["cf"]["essential"]
+    st.markdown("**Tính quỹ khẩn cấp của bạn**")
+    if not essential:
+        st.info("Khai khoản **Chi thiết yếu** ở trang **Thu chi** để app tính quỹ khẩn cấp theo số liệu của bạn.")
+        return
+    a1, a2, a3 = st.columns(3)
+    household = a1.selectbox("Hoàn cảnh", engine.HOUSEHOLDS, key="em_house")
+    dependents = a2.selectbox("Người phụ thuộc", engine.DEPENDENTS, key="em_dep")
+    save = a3.number_input("Để dành mỗi tháng (triệu ₫)", 0.0, 500.0,
+                           round(max(0.0, fp["cf"]["surplus"]) / 1e6, 1), 0.5, key="em_save")
+    freelance = st.checkbox(f"Thu nhập tự do / tự kinh doanh (để thêm {engine.FREELANCE_EXTRA} tháng)", key="em_free")
+    p = engine.emergency_plan(essential, fp["emergency_value"], household, dependents, freelance, save * 1e6)
+    tr = lambda x: f"{x / 1e6:,.1f} tr".replace(",", "§").replace(".", ",").replace("§", ".")   # noqa: E731
+    st.html(style.kpi_grid([
+        style.kpi("Nên có", f"{p['months']} tháng", f"chi bắt buộc {tr(essential)}/tháng", icon="target"),
+        style.kpi("Số tiền mục tiêu", tr(p["target"]), f"{p['months']} × chi bắt buộc", lime=True, icon="pig-money"),
+        style.kpi("Đang có (mã QKC)", tr(p["current"]), f"{p['progress']:.0%} mục tiêu" if p["progress"] is not None else "",
+                  progress=p["progress"], icon="wallet"),
+        style.kpi("Đủ quỹ sau", "Đã đủ" if p["gap"] == 0 else
+                  (f"{p['months_to_goal']} tháng" if p["months_to_goal"] else "–"),
+                  f"còn thiếu {tr(p['gap'])}" if p["gap"] else "", icon="clock"),
+    ]))
+    current_target = int(fp["emergency_target"])
+    if p["months"] != current_target:
+        if st.button(f"Đặt {p['months']} tháng làm mục tiêu quỹ khẩn cấp (hiện {current_target} tháng)",
+                     key=style.ic("target", "em_set")):
+            db.set_kv(c, "assumptions", {"emergency_months": p["months"]})
+            from . import ui
+            ui.flash(f"Đã đặt mục tiêu quỹ khẩn cấp {p['months']} tháng chi thiết yếu")
+            st.rerun()
+    else:
+        st.caption(f"Mục tiêu quỹ khẩn cấp trong app đang là **{current_target} tháng** – khớp với hoàn cảnh đã chọn.")
+
+    st.markdown("**Chia quỹ thành nhiều sổ**")
+    scheme = st.radio("Cách chia", list(engine.LADDERS), horizontal=True, key="em_ladder", index=1)
+    st.dataframe([{"Kỳ hạn": lb, "Tỷ lệ": f"{pc:.0%}", "Số tiền": tr(amt)}
+                  for lb, pc, amt in engine.ladder(p["target"], scheme)], hide_index=True, width="stretch")
+
+
+def render_emergency(c, data: dict, fp: dict) -> None:
+    """Bài học Xây dựng quỹ khẩn cấp – cuối trang Tiết kiệm, Mục tiêu & Nợ."""
+    intro.css()
+    st.subheader("Xây dựng quỹ khẩn cấp – lớp đệm an toàn")
+    st.caption("Nền móng đầu tiên trước khi tăng tốc đầu tư: một khoản tiền sẵn sàng cho những chuyện không ai muốn.")
+
+    with st.expander("1 · Quỹ khẩn cấp là gì, vì sao phải để riêng?", key=style.ic("alert-triangle", "em_what")):
+        st.html(intro._cards(EM_WHAT))
+        st.html(style.tip("<b>Áp dụng trong app:</b> " + EM_APPLY["what"]))
+
+    with st.expander("2 · Cần bao nhiêu tiền? – máy tính theo hoàn cảnh của bạn",
+                     key=style.ic("calculator", "em_size")):
+        st.markdown(EM_SIZE_TABLE)
+        st.html(f'<div class="story"><p>{EM_SIZE_NOTE}</p></div>')
+        _em_calculator(c, data, fp)
+        st.html(style.tip("<b>Áp dụng trong app:</b> " + EM_APPLY["size"]))
+
+    with st.expander("3 · Đầu tư trước hay làm quỹ khẩn cấp trước?", key=style.ic("help-circle", "em_first")):
+        st.html(intro._cards(EM_FIRST))
+        st.html(style.steps([("Ví dụ", "Thu nhập 15 triệu/tháng, chi bắt buộc khoảng 6,3 triệu → quỹ 6 tháng ≈ 38 triệu, "
+                                       "quỹ 1 năm ≈ 76 triệu. Bớt một phần tiền đầu tư và cắt bớt mua sắm để dành được "
+                                       "khoảng 6 triệu/tháng thì <b>chỉ hơn 6 tháng</b> là có quỹ 6 tháng, thay vì gần 8 "
+                                       "tháng. Ý chính: <b>biết rõ chi tiêu hằng tháng</b> giúp để dành nhanh hơn.")]))
+        st.html(style.tip("<b>Áp dụng trong app:</b> " + EM_APPLY["first"]))
+
+    with st.expander("4 · Để tiền ở đâu & chia thành nhiều sổ", key=style.ic("building-bank", "em_where")):
+        st.markdown("**Nơi gửi cần đủ 3 điều**")
+        st.html('<div class="promise one"><div class="col"><ul>' + "".join(
+            f"<li>{style.svg('circle-check', 18, style.LIME)}<span>{r}</span></li>" for r in EM_WHERE_RULES)
+            + "</ul></div></div>")
+        st.html(intro._cards(EM_WHERE))
+        st.markdown("**Chia nhiều phần, không gửi một chỗ**")
+        st.html(f'<div class="story"><p>{EM_LADDER_NOTE}</p></div>')
+        st.markdown("- **50/50**: nửa gửi kỳ hạn dài (lãi cao), nửa gửi ngắn (2 tuần – 1 tháng).\n"
+                    "- **50/30/20**: dài hạn 8–13 tháng · trung hạn 3–5 tháng · ngắn hạn 1 tháng.\n"
+                    "- **40/30/20/10**: tương tự nhưng chia nhỏ hơn.\n\n"
+                    "Bảng số tiền theo từng cách chia nằm ở **mục 2** (theo quỹ mục tiêu của bạn).")
+        st.html(style.tip("<b>Áp dụng trong app:</b> " + EM_APPLY["ladder"]))
+        st.caption("Mức lãi suất và sản phẩm thay đổi theo thời gian – app không khuyến nghị nơi gửi cụ thể.")

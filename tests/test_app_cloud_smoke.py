@@ -138,6 +138,10 @@ def test_celebration_ack_and_intro_tabs(seeded):
         assert not at.exception, at.exception[0].value
         assert any("Nền tảng tài chính" in x.value for x in at.subheader)
         assert sum(x.label[:1].isdigit() and " · " in x.label for x in at.expander) == 5
+        at.switch_page("views/tiet_kiem.py").run()
+        assert not at.exception, at.exception[0].value
+        assert any("quỹ khẩn cấp" in x.value for x in at.subheader)
+        assert sum(x.label[:1].isdigit() and " · " in x.label for x in at.expander) == 4
         at.switch_page("views/gioi_thieu.py").run()
         assert not at.exception, at.exception[0].value
         assert [t.label for t in at.tabs] == ["Về app", "Tính năng", "Câu chuyện", "Hành trình", "Ví dụ tính", "Hỏi đáp"]

@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from fi_app import db, engine, style, ui
+from fi_app import db, engine, lessons, style, ui
 
 c, data, h, fp = ui.state()
 style.title("building-bank", "Tiết kiệm, Mục tiêu & Nợ")
@@ -162,3 +162,6 @@ with tab_n:
                                  ["name", "balance", "rate", "monthly_payment", "end_date", "note"], transform=_rate)
         ui.flash(f"Nợ: sửa {e}, thêm {a}, xoá {x}")
         st.rerun()
+
+st.write("")
+lessons.render_emergency(c, data, fp)

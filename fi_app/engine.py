@@ -631,3 +631,34 @@ def budget_check(cf: dict) -> dict | None:
     return {"essential": cf["essential"] / inc, "flexible": cf["flexible"] / inc, "save": save / inc,
             "pay_first": cf["invest"] / inc,
             "buffer_low": cf["expense"] * 0.05, "buffer_high": cf["expense"] * 0.10}
+
+
+# ================================================================ quỹ khẩn cấp (bài học Tiết kiệm)
+HOUSEHOLDS = ("Độc thân", "Vợ chồng đều có thu nhập")
+DEPENDENTS = ("Không ai", "1–2 người", "3–4 người")
+EMERGENCY_MONTHS = {("Độc thân", "Không ai"): 6, ("Độc thân", "1–2 người"): 12, ("Độc thân", "3–4 người"): 18,
+                    ("Vợ chồng đều có thu nhập", "Không ai"): 3, ("Vợ chồng đều có thu nhập", "1–2 người"): 6,
+                    ("Vợ chồng đều có thu nhập", "3–4 người"): 12}
+FREELANCE_EXTRA = 3            # thu nhập tự do / tự kinh doanh: gợi ý để thêm 3 tháng
+LADDERS = {
+    "50/50": [("Dài hạn (8–13 tháng)", .5), ("Ngắn hạn (2 tuần – 1 tháng)", .5)],
+    "50/30/20": [("Dài hạn (8–13 tháng)", .5), ("Trung hạn (3–5 tháng)", .3), ("Ngắn hạn (1 tháng)", .2)],
+    "40/30/20/10": [("Dài hạn (8–13 tháng)", .4), ("Trung hạn (3–5 tháng)", .3), ("Ngắn hạn (1 tháng)", .2),
+                    ("Rút ngay / 2 tuần", .1)],
+}
+
+
+def emergency_plan(essential: float, current: float, household: str, dependents: str, freelance: bool,
+                   monthly_save: float) -> dict:
+    """Quỹ khẩn cấp gợi ý theo hoàn cảnh: số tháng, số tiền, còn thiếu, số tháng để đủ với mức để dành mỗi tháng."""
+    months = EMERGENCY_MONTHS[(household, dependents)] + (FREELANCE_EXTRA if freelance else 0)
+    target = months * essential
+    gap = max(0.0, target - current)
+    return {"months": months, "target": target, "current": current, "gap": gap,
+            "progress": min(1.0, current / target) if target else None,
+            "months_to_goal": (0 if gap == 0 else math.ceil(gap / monthly_save)) if monthly_save > 0 else None}
+
+
+def ladder(amount: float, scheme: str) -> list[tuple[str, float, float]]:
+    """Chia quỹ thành nhiều sổ: (kỳ hạn, tỷ lệ, số tiền)."""
+    return [(lb, p, amount * p) for lb, p in LADDERS[scheme]]

@@ -43,3 +43,13 @@ def test_ascii_text_strips_vietnamese_and_symbols():
 def test_svg_and_cfg_absent():
     assert donate.qr_png(donate.vietqr_payload("970436", "1", 1000)).startswith(b"\x89PNG")
     assert donate.cfg() is None and donate.invite_line() == ""          # không có secrets [donate] trong test
+
+
+def test_bin_resolved_from_bank_name():
+    assert donate.resolve_bin("Vietinbank", "970416") == (
+        "970415", "bank_bin 970416 không khớp Vietinbank (970415) – app dùng 970415")   # BIN gõ nhầm (ACB) được sửa
+    assert donate.resolve_bin("VietinBank", "")[0] == "970415"
+    assert donate.resolve_bin("Vietcombank", "")[0] == "970436"
+    assert donate.resolve_bin("MB Bank", "")[0] == "970422"
+    assert donate.resolve_bin("Ngân hàng lạ", "970999") == ("970999", "")    # không có trong bảng → dùng BIN khai
+    assert donate.resolve_bin("Ngân hàng lạ", "") == ("", "")

@@ -146,5 +146,5 @@ if donate.invite_line():
     st.write("")
     i1, i2 = st.columns([4, 1], vertical_alignment="center")
     i1.caption(donate.invite_line())
-    with i2.container(key=style.ic("coin", "lk_donate")):
-        st.page_link("views/gioi_thieu.py", label="Ủng hộ", width="stretch")
+    with i2.container(key=style.ic("heart", "lk_donate")):
+        st.page_link("views/ung_ho.py", label="Ủng hộ", width="stretch")

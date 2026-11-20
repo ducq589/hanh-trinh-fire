@@ -165,7 +165,7 @@ button[data-testid="stBaseButton-primaryFormSubmit"] {{ color: #111 !important; 
 # Trang (đường dẫn URL) → icon ở menu thanh bên
 NAV_ICONS = {"": "home", "ke_hoach_fire": "flame", "lich_su": "chart-line", "giao_dich": "receipt",
              "gia": "chart-candle", "tai_san": "briefcase", "tiet_kiem": "building-bank", "thu_chi": "cash",
-             "gioi_thieu": "info-circle", "huong_dan": "book", "sao_luu": "settings"}
+             "gioi_thieu": "info-circle", "huong_dan": "book", "ung_ho": "heart", "sao_luu": "settings"}
 
 
 def svg(name: str, size: int = 18, color: str = "currentColor", stroke: float = 2, cls: str = "") -> str:

@@ -282,7 +282,7 @@ def celebrate(c, data: dict, h: dict, fp: dict) -> None:
     st.html(style.celebration(title, msg, [_ms_text(m["key"])[0] for m in fresh[1:]]))
     from . import donate
     if donate.cfg():
-        st.caption("App miễn phí. Nếu app đồng hành tốt với bạn, bạn có thể ủng hộ tác giả ở trang **Giới thiệu** – "
+        st.caption("App miễn phí. Nếu app đồng hành tốt với bạn, bạn có thể ủng hộ tác giả ở trang **Ủng hộ** – "
                    "hoàn toàn tự nguyện.")
     flag = "_balloons_" + ",".join(m["key"] for m in fresh)
     if not st.session_state.get(flag):          # hiệu ứng 1 lần mỗi phiên, không lặp khi trang chạy lại

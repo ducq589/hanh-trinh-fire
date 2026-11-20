@@ -240,14 +240,16 @@ def test_donate_box_when_configured(entry):
         assert any("ủng hộ tác giả" in x.value for x in at.caption)
         at.switch_page("views/gioi_thieu.py").run()
         assert not at.exception, at.exception[0].value
-        assert any("Ủng hộ tác giả" in x.value for x in at.markdown)
+        at.switch_page("views/ung_ho.py").run()                                # trang Ủng hộ trong mục Hệ thống
+        assert not at.exception, at.exception[0].value
+        assert any("Ủng hộ tác giả" in str(h.proto.body) for h in at.get("html"))
         assert len(at.image) >= 1                                              # ảnh QR
         at.radio(key="donate_amt").set_value("Tự nhập").run()               # đổi mức → QR tĩnh, vẫn không lỗi
         assert not at.exception, at.exception[0].value
 
         plain = AppTest.from_file(str(entry), default_timeout=90).run()     # không cấu hình → không có khung
         plain.switch_page("views/gioi_thieu.py").run()
-        assert not any("Ủng hộ tác giả" in x.value for x in plain.markdown)
+        assert not any("ủng hộ tác giả" in x.value for x in plain.caption)
     finally:
         os.chdir(cwd)
 

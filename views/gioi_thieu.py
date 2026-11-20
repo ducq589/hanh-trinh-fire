@@ -18,8 +18,12 @@ with t_app:
     intro.values()
     st.subheader("Cam kết của app")
     intro.promise_card()
-    st.write("")
-    donate.render()
+    if donate.cfg():
+        st.write("")
+        d1, d2 = st.columns([4, 1], vertical_alignment="center")
+        d1.caption(donate.invite_line())
+        with d2.container(key=style.ic("heart", "gt_donate")):
+            st.page_link("views/ung_ho.py", label="Ủng hộ", width="stretch")
 
 with t_feat:
     st.subheader("Tính năng nổi bật")

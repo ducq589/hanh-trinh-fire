@@ -5,7 +5,7 @@
 """
 import streamlit as st
 
-from fi_app import auth, db, engine, legal, prices, style, ui
+from fi_app import auth, db, donate, engine, legal, prices, style, ui
 
 st.set_page_config(page_title="Hành trình FIRE", page_icon="🔥", layout="wide")
 style.apply()
@@ -57,6 +57,7 @@ pages = {
     "Hệ thống": [
         st.Page("views/gioi_thieu.py", title="Giới thiệu"),
         st.Page("views/huong_dan.py", title="Hướng dẫn"),
+        *([st.Page("views/ung_ho.py", title="Ủng hộ")] if donate.cfg() else []),
         st.Page("views/sao_luu.py", title="Sao lưu & Cài đặt"),
     ],
 }

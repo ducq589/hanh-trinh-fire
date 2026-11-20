@@ -112,7 +112,8 @@ with t2:
                                 "<br>• <b>Không muốn nhập lại lịch sử</b> (đã mua nhiều lần): tab <b>Tài sản đang có</b> → "
                                 "chưa có mã trong bảng thì gõ mã ở ô <b>Thêm</b> phía trên (VD: DCBF, FPT) → "
                                 "điền <b>Số lượng đang có</b> và <b>Giá vốn bình quân</b> (xem trong app Fmarket/app chứng khoán) "
-                                "→ <b>Lưu khai báo</b>. Lãi/lỗ tính ngay; XIRR tính từ ngày khai."
+                                "→ <b>Lưu khai báo</b>. Lãi/lỗ tính ngay; XIRR tính từ ngày khai. Lưu xong mã rời khỏi bảng này "
+                                "(chỉ dùng cho lần khai đầu); muốn sửa thì vào tab <b>Lịch sử & sửa</b>."
                                 "<br>• <b>Muốn đủ lịch sử</b>: tab <b>Giao dịch khác</b>, nhập từng lần mua – XIRR chính xác từ đầu."),
     ], start=3))
     st.graphviz_chart(style.flow(

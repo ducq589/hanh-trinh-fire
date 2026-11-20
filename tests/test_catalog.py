@@ -61,19 +61,21 @@ def test_detect_fund_etf_stock_unknown():
         catalog.detect("XYZ123", FUNDS, has_quote)
 
 
-def test_remove_only_without_orders(store):
+def test_remove_only_assets_without_data(store):
     import datetime as dt
-    catalog.add(store, catalog.build("fund", "DCDS", "DCDS"))
-    catalog.add(store, catalog.build("stock", "FPT", "FPT"))
-    db.set_opening(store, "DCDS", 10, 90000, dt.date(2026, 6, 1))
-    db.upsert_price(store, "2026-06-01", "DCDS", 91000, "tay")
-    store.market_upsert([("fmarket:DCDS", "2026-06-01", 90500.0, "t")])
-    db.add_transaction(store, "2026-06-02", "FPT", "Mua", price=100000, qty=10)
-    assert catalog.removable(store, "DCDS") and not catalog.removable(store, "FPT")
-    catalog.remove(store, "DCDS")
-    assert [a["code"] for a in db.load_all(store)["assets"]] == ["FPT"]
-    assert store.q("SELECT * FROM transactions WHERE code='DCDS'") == []
-    assert store.q("SELECT * FROM prices WHERE code='DCDS'") == []
-    assert store.one("SELECT COUNT(*) AS n FROM market_prices WHERE symbol='fmarket:DCDS'") == 1   # giá dùng chung giữ nguyên
-    with pytest.raises(ValueError, match="đã có lệnh"):
-        catalog.remove(store, "FPT")
+    for code in ("DCDS", "FPT", "VNM"):
+        catalog.add(store, catalog.build("stock", code, code))
+    db.set_opening(store, "DCDS", 10, 90000, dt.date(2026, 6, 1))           # đã khai số dư
+    db.add_transaction(store, "2026-06-02", "FPT", "Mua", price=100000, qty=10)  # đã có lệnh
+    db.upsert_price(store, "2026-06-01", "VNM", 61000, "tay")                # mã trống, chỉ có giá tay
+    store.market_upsert([("vndirect:VNM", "2026-06-01", 60500.0, "t")])
+    assert catalog.has_data(store, "DCDS") and catalog.has_data(store, "FPT") and not catalog.has_data(store, "VNM")
+    for code in ("DCDS", "FPT"):
+        assert not catalog.removable(store, code)
+        with pytest.raises(ValueError, match="đã có dữ liệu"):
+            catalog.remove(store, code)
+    catalog.remove(store, "VNM")
+    assert [a["code"] for a in db.load_all(store)["assets"]] == ["DCDS", "FPT"]
+    assert store.q("SELECT * FROM prices WHERE code='VNM'") == []
+    assert store.one("SELECT COUNT(*) AS n FROM market_prices WHERE symbol='vndirect:VNM'") == 1   # giá dùng chung giữ nguyên
+    assert len(store.q("SELECT * FROM transactions")) == 2                                      # dữ liệu cũ nguyên vẹn

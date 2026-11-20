@@ -19,7 +19,8 @@ style.tab_icons("tabs_gd", ["wallet", "bolt", "plus", "history"])
 
 # --------------------------------------------------------------- opening balances
 with tab_open:
-    st.caption("Đã mua CCQ/cổ phiếu từ trước và **không muốn nhập lại từng lệnh**? Chỉ cần chép 2 con số cho mỗi tài sản: "
+    st.caption("**Khai báo lần đầu** – chỉ hiện tài sản **chưa có dữ liệu**. Đã mua CCQ/cổ phiếu từ trước và **không muốn "
+               "nhập lại từng lệnh**? Chỉ cần chép 2 con số cho mỗi tài sản: "
                "**Số lượng đang có** và **Giá vốn bình quân** (hoặc Tổng vốn). Từ nay mua thêm thì ghi ở tab *Mua DCA nhanh*.")
     st.html(style.tip("Lấy số ở đâu? App Fmarket / app quỹ: <b>Tài sản</b> → Số CCQ, Giá vốn BQ. "
                       "App chứng khoán: <b>Danh mục</b> → Khối lượng, Giá vốn. Số lượng CCQ ghi đủ 2 số lẻ."))
@@ -46,29 +47,22 @@ with tab_open:
             if asset:
                 ui.add_asset(c, asset, hint=" Điền Số lượng đang có và Giá vốn BQ ở bảng bên dưới.")
 
+    # Chỉ tài sản CHƯA có dữ liệu (khai lần đầu). Đã có lệnh/số dư → sửa ở tab Lịch sử & sửa, không hiện ở đây.
+    used = {t["code"] for t in data["transactions"]} | {sv["code"] for sv in data["savings"]}
+    fresh = [a for a in market if a["code"] not in used]
     rows_by = {r["code"]: r for r in h["rows"]}
-    op_rows = []
-    for a in market:
-        mine = [t for t in data["transactions"] if t["code"] == a["code"] and t["type"] == db.OPENING]
-        q = sum(engine.n(t["qty"]) for t in mine)
-        cost = sum(engine.n(t["qty"]) * engine.n(t["price"]) or engine.n(t["amount"]) for t in mine)
-        r = rows_by.get(a["code"], {})
-        n_orders = sum(1 for t in data["transactions"] if t["code"] == a["code"] and t["type"] != db.OPENING)
-        op_rows.append({"code": a["code"], "name": a["name"], "orders": n_orders, "qty": q or None,
-                        "avg": round(cost / q, 2) if q else None, "total": round(cost) if q else None,
-                        "day": min((engine.to_date(t["date"]) for t in mine), default=dt.date.today()),
-                        "price": r.get("price"), "pnl": (r.get("pnl") if q else None)})
-    op_df = pd.DataFrame(op_rows, columns=["code", "name", "orders", "qty", "avg", "total", "day", "price", "pnl"])
-    num_cols = ["qty", "avg", "total", "price", "pnl"]
+    op_df = pd.DataFrame([{"code": a["code"], "name": a["name"], "qty": None, "avg": None, "total": None,
+                           "day": dt.date.today(), "price": rows_by.get(a["code"], {}).get("price")} for a in fresh],
+                         columns=["code", "name", "qty", "avg", "total", "day", "price"])
+    num_cols = ["qty", "avg", "total", "price"]
     op_df[num_cols] = op_df[num_cols].astype(float)            # ô trống hiển thị trống thay vì "None"
     if op_df.empty:
-        st.info("Chưa có tài sản nào. Gõ mã quỹ / cổ phiếu ở ô phía trên rồi bấm **Thêm**.")
+        st.info("Mọi tài sản trong danh mục đã có dữ liệu. Có tài sản mới mua từ trước? Gõ mã ở ô **Thêm** phía trên. "
+                "Sửa số dư đã khai ở tab *Lịch sử & sửa* (dòng Vốn đầu kỳ).")
     else:
-        edited = st.data_editor(op_df, key="open_ed", hide_index=True, width="stretch", disabled=["code", "name", "orders", "price", "pnl"],
+        edited = st.data_editor(op_df, key="open_ed", hide_index=True, width="stretch", disabled=["code", "name", "price"],
                                 column_config={
             "code": st.column_config.TextColumn("Mã"), "name": st.column_config.TextColumn("Tên"),
-            "orders": st.column_config.NumberColumn("Lệnh đã ghi", format="%d",
-                                                    help="Số giao dịch Mua/Bán/Cổ tức đã nhập cho mã này"),
             "qty": st.column_config.NumberColumn("Số lượng đang có", min_value=0.0, format="%.2f"),
             "avg": st.column_config.NumberColumn("Giá vốn BQ (₫)", min_value=0.0, format="localized",
                                                  help="Giá vốn bình quân mỗi CCQ/cổ phiếu"),
@@ -77,53 +71,37 @@ with tab_open:
             "day": st.column_config.DateColumn("Ngày khai", format="DD/MM/YYYY",
                                                help="Thường là hôm nay. XIRR sẽ tính từ ngày này."),
             "price": st.column_config.NumberColumn("Giá hiện tại", format="localized"),
-            "pnl": st.column_config.NumberColumn("Lãi/lỗ tạm tính", format="localized"),
         })
-        changes = []
-        for (_, old_r), (_, new_r) in zip(op_df.iterrows(), edited.iterrows()):
-            def val(x):
-                return None if pd.isna(x) else x
-            o = (val(old_r["qty"]), val(old_r["avg"]), val(old_r["total"]), val(old_r["day"]))
-            nw = (val(new_r["qty"]), val(new_r["avg"]), val(new_r["total"]), val(new_r["day"]))
-            if o != nw:
-                q, avg, tot = nw[0] or 0, nw[1], nw[2]
-                if q and avg in (None, 0) and tot:
-                    avg = tot / q                       # chỉ có tổng vốn → suy ra giá vốn BQ
-                elif q and avg and tot and o[1] == avg:  # người dùng sửa Tổng vốn, giữ giá cũ → ưu tiên tổng vốn
-                    avg = tot / q
-                changes.append((new_r["code"], q, avg, nw[3] or dt.date.today()))
-        missing = [code for code, q, avg, _ in changes if q and not avg]
-        orders = dict(zip(op_df["code"], op_df["orders"]))
-        dup = [code for code, q, _, day in changes if q and any(
-            t["code"] == code and t["type"] != db.OPENING and engine.to_date(t["date"]) <= day for t in data["transactions"])]
-        if dup:
-            st.warning(f"{', '.join(dup)} đã có lệnh mua/bán trước ngày khai ({', '.join(str(orders[x]) + ' lệnh' for x in dup)}). "
-                       "Số lượng đang có đã gồm các lệnh đó → khai thêm sẽ bị **tính trùng**. Hãy chọn một trong hai: "
-                       "xoá các lệnh cũ ở tab *Lịch sử & sửa*, hoặc không khai số dư cho mã này.")
+        todo = []
+        for _, r in edited.iterrows():
+            q = 0 if pd.isna(r["qty"]) else float(r["qty"])
+            if not q:
+                continue
+            avg = None if pd.isna(r["avg"]) or not r["avg"] else float(r["avg"])
+            tot = None if pd.isna(r["total"]) or not r["total"] else float(r["total"])
+            if avg is None and tot:
+                avg = tot / q                            # chỉ có tổng vốn → suy ra giá vốn BQ
+            day = pd.Timestamp(r["day"]).date() if not pd.isna(r["day"]) else dt.date.today()
+            todo.append((r["code"], q, avg, day))
+        missing = [code for code, q, avg, _ in todo if not avg]
         if missing:
             st.warning(f"Cần Giá vốn BQ hoặc Tổng vốn cho: {', '.join(missing)}")
-        if st.button(f"Lưu khai báo ({len(changes)} thay đổi)", type="primary", disabled=not changes or bool(missing),
+        if st.button(f"Lưu khai báo ({len(todo)} mã)", type="primary", disabled=not todo or bool(missing),
                      key=style.ic("device-floppy", "luusodu")):
-            res = [f"{code} {db.set_opening(c, code, q, avg, day)}" for code, q, avg, day in changes]
-            words = {"added": "đã thêm", "updated": "đã cập nhật", "deleted": "đã xoá", "none": "không đổi"}
-            ui.flash("Số dư đầu kỳ: " + ", ".join(f"{x.split()[0]} {words[x.split()[1]]}" for x in res))
+            for code, q, avg, day in todo:
+                db.set_opening(c, code, q, avg, day)
+            ui.flash(f"Đã lưu số dư: {', '.join(x[0] for x in todo)}. Muốn sửa: tab Lịch sử & sửa (dòng Vốn đầu kỳ).")
             st.rerun()
-        can_remove = [a["code"] for a in market if catalog.removable(c, a["code"])]
-        with st.expander("Bỏ mã khỏi danh mục", key=style.ic("trash", "bo_ma")):
-            if not can_remove:
-                st.caption("Không có mã nào bỏ được. Mã đã có lệnh giao dịch: xoá lệnh ở tab *Lịch sử & sửa* trước.")
-            else:
-                st.caption("Chỉ bỏ được mã **chưa có lệnh Mua/Bán/Cổ tức** (số dư đầu kỳ của mã cũng bị xoá theo). "
-                           "Mã đã có lệnh: xoá lệnh ở tab *Lịch sử & sửa* trước.")
-                rm = st.multiselect("Chọn mã", can_remove, format_func=names.get, key="rm_codes")
-                sure = st.checkbox("Tôi muốn bỏ các mã đã chọn", key="rm_sure")
-                if st.button("Bỏ", disabled=not (rm and sure), key=style.ic("trash", "bo_ma_btn")):
-                    for code_rm in rm:
-                        catalog.remove(c, code_rm)
-                    ui.flash(f"Đã bỏ khỏi danh mục: {', '.join(rm)}")
-                    st.rerun()
-        st.caption("Lãi/lỗ = (Giá hiện tại − Giá vốn) × Số lượng. XIRR của các mã này tính **từ ngày khai**, "
-                   "hiện sau 30 ngày. Ô mờ ghi None = chưa khai. Xoá trắng Số lượng để bỏ số dư đầu kỳ của mã đó.")
+        st.caption("Lãi/lỗ = (Giá hiện tại − Giá vốn) × Số lượng. XIRR của các mã này tính **từ ngày khai**, hiện sau 30 ngày. "
+                   "Ô mờ ghi None = chưa khai. Lưu xong, mã chuyển sang Tổng quan; sửa/xoá số dư ở tab *Lịch sử & sửa*.")
+        with st.expander("Bỏ mã thêm nhầm", key=style.ic("trash", "bo_ma")):
+            st.caption("Chỉ bỏ được mã **chưa có dữ liệu** (đang hiện trong bảng trên). Tài sản đã có lệnh/số dư không bị ảnh hưởng.")
+            rm = st.multiselect("Chọn mã", [a["code"] for a in fresh], format_func=names.get, key="rm_codes")
+            if st.button("Bỏ", disabled=not rm, key=style.ic("trash", "bo_ma_btn")):
+                for code_rm in rm:
+                    catalog.remove(c, code_rm)
+                ui.flash(f"Đã bỏ khỏi danh mục: {', '.join(rm)}")
+                st.rerun()
 
 # --------------------------------------------------------------- DCA
 with tab_dca:

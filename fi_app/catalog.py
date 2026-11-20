@@ -128,18 +128,22 @@ def detect(code: str, funds: list[dict] | None, quote=None) -> dict:
     raise ValueError(f"Không tìm thấy mã {code} trên Fmarket (quỹ mở) hay VNDirect (cổ phiếu/ETF)")
 
 
-def removable(store: db.Store, code: str) -> bool:
-    """Bỏ được khi chưa có lệnh Mua/Bán/Cổ tức và chưa có sổ tiết kiệm (chỉ có số dư đầu kỳ hoặc trống)."""
-    orders = store.one("SELECT COUNT(*) AS n FROM transactions WHERE code = ? AND type <> ?", (code, db.OPENING))
+def has_data(store: db.Store, code: str) -> bool:
+    """Đã có dữ liệu: bất kỳ giao dịch nào (kể cả số dư đầu kỳ) hoặc sổ tiết kiệm."""
+    tx = store.one("SELECT COUNT(*) AS n FROM transactions WHERE code = ?", (code,))
     books = store.one("SELECT COUNT(*) AS n FROM savings WHERE code = ?", (code,))
-    return not orders and not books
+    return bool(tx or books)
+
+
+def removable(store: db.Store, code: str) -> bool:
+    """Chỉ bỏ được mã CHƯA có dữ liệu (thêm nhầm) – không bao giờ xoá tài sản đã có lệnh/số dư."""
+    return not has_data(store, code)
 
 
 def remove(store: db.Store, code: str) -> None:
-    """Bỏ tài sản khỏi danh mục cùng số dư đầu kỳ và giá nhập tay của nó (giá thị trường dùng chung giữ nguyên)."""
+    """Bỏ tài sản chưa có dữ liệu khỏi danh mục (kèm giá nhập tay nếu có; giá thị trường dùng chung giữ nguyên)."""
     if not removable(store, code):
-        raise ValueError(f"{code} đã có lệnh giao dịch hoặc sổ tiết kiệm – xoá chúng trước")
+        raise ValueError(f"{code} đã có dữ liệu (giao dịch, số dư hoặc sổ tiết kiệm) – không bỏ ở đây")
     with store.tx():
-        store.x("DELETE FROM transactions WHERE code = ? AND type = ?", (code, db.OPENING))
         store.x("DELETE FROM prices WHERE code = ?", (code,))
         store.x("DELETE FROM assets WHERE code = ?", (code,))

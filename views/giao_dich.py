@@ -13,8 +13,80 @@ codes = [a["code"] for a in market]
 names = {a["code"]: f"{a['code']} – {a['name']}" for a in market}
 book = h["book"]
 
-tab_dca, tab_other, tab_hist = st.tabs(["Mua DCA nhanh", "Giao dịch khác", "Lịch sử & sửa"], key="tabs_gd")
-style.tab_icons("tabs_gd", ["bolt", "plus", "history"])
+tab_open, tab_dca, tab_other, tab_hist = st.tabs(["Tài sản đang có", "Mua DCA nhanh", "Giao dịch khác", "Lịch sử & sửa"],
+                                                 key="tabs_gd")
+style.tab_icons("tabs_gd", ["wallet", "bolt", "plus", "history"])
+
+# --------------------------------------------------------------- opening balances
+with tab_open:
+    st.caption("Đã mua CCQ/cổ phiếu từ trước và **không muốn nhập lại từng lệnh**? Chỉ cần chép 2 con số cho mỗi tài sản: "
+               "**Số lượng đang có** và **Giá vốn bình quân** (hoặc Tổng vốn). Từ nay mua thêm thì ghi ở tab *Mua DCA nhanh*.")
+    st.html(style.tip("Lấy số ở đâu? App Fmarket / app quỹ: <b>Tài sản</b> → Số CCQ, Giá vốn BQ. "
+                      "App chứng khoán: <b>Danh mục</b> → Khối lượng, Giá vốn. Số lượng CCQ ghi đủ 2 số lẻ."))
+    rows_by = {r["code"]: r for r in h["rows"]}
+    op_rows = []
+    for a in market:
+        mine = [t for t in data["transactions"] if t["code"] == a["code"] and t["type"] == db.OPENING]
+        q = sum(engine.n(t["qty"]) for t in mine)
+        cost = sum(engine.n(t["qty"]) * engine.n(t["price"]) or engine.n(t["amount"]) for t in mine)
+        r = rows_by.get(a["code"], {})
+        n_orders = sum(1 for t in data["transactions"] if t["code"] == a["code"] and t["type"] != db.OPENING)
+        op_rows.append({"code": a["code"], "name": a["name"], "orders": n_orders, "qty": q or None,
+                        "avg": round(cost / q, 2) if q else None, "total": round(cost) if q else None,
+                        "day": min((engine.to_date(t["date"]) for t in mine), default=dt.date.today()),
+                        "price": r.get("price"), "pnl": (r.get("pnl") if q else None)})
+    op_df = pd.DataFrame(op_rows, columns=["code", "name", "orders", "qty", "avg", "total", "day", "price", "pnl"])
+    num_cols = ["qty", "avg", "total", "price", "pnl"]
+    op_df[num_cols] = op_df[num_cols].astype(float)            # ô trống hiển thị trống thay vì "None"
+    if op_df.empty:
+        st.info("Chưa có tài sản nào. Thêm quỹ/cổ phiếu ở trang **Tài sản** trước.")
+    else:
+        edited = st.data_editor(op_df, key="open_ed", hide_index=True, width="stretch", disabled=["code", "name", "orders", "price", "pnl"],
+                                column_config={
+            "code": st.column_config.TextColumn("Mã"), "name": st.column_config.TextColumn("Tên"),
+            "orders": st.column_config.NumberColumn("Lệnh đã ghi", format="%d",
+                                                    help="Số giao dịch Mua/Bán/Cổ tức đã nhập cho mã này"),
+            "qty": st.column_config.NumberColumn("Số lượng đang có", min_value=0.0, format="%.2f"),
+            "avg": st.column_config.NumberColumn("Giá vốn BQ (₫)", min_value=0.0, format="localized",
+                                                 help="Giá vốn bình quân mỗi CCQ/cổ phiếu"),
+            "total": st.column_config.NumberColumn("hoặc Tổng vốn (₫)", min_value=0.0, format="localized",
+                                                   help="Điền nếu không biết giá vốn BQ – app tự chia ra"),
+            "day": st.column_config.DateColumn("Ngày khai", format="DD/MM/YYYY",
+                                               help="Thường là hôm nay. XIRR sẽ tính từ ngày này."),
+            "price": st.column_config.NumberColumn("Giá hiện tại", format="localized"),
+            "pnl": st.column_config.NumberColumn("Lãi/lỗ tạm tính", format="localized"),
+        })
+        changes = []
+        for (_, old_r), (_, new_r) in zip(op_df.iterrows(), edited.iterrows()):
+            def val(x):
+                return None if pd.isna(x) else x
+            o = (val(old_r["qty"]), val(old_r["avg"]), val(old_r["total"]), val(old_r["day"]))
+            nw = (val(new_r["qty"]), val(new_r["avg"]), val(new_r["total"]), val(new_r["day"]))
+            if o != nw:
+                q, avg, tot = nw[0] or 0, nw[1], nw[2]
+                if q and avg in (None, 0) and tot:
+                    avg = tot / q                       # chỉ có tổng vốn → suy ra giá vốn BQ
+                elif q and avg and tot and o[1] == avg:  # người dùng sửa Tổng vốn, giữ giá cũ → ưu tiên tổng vốn
+                    avg = tot / q
+                changes.append((new_r["code"], q, avg, nw[3] or dt.date.today()))
+        missing = [code for code, q, avg, _ in changes if q and not avg]
+        orders = dict(zip(op_df["code"], op_df["orders"]))
+        dup = [code for code, q, _, day in changes if q and any(
+            t["code"] == code and t["type"] != db.OPENING and engine.to_date(t["date"]) <= day for t in data["transactions"])]
+        if dup:
+            st.warning(f"{', '.join(dup)} đã có lệnh mua/bán trước ngày khai ({', '.join(str(orders[x]) + ' lệnh' for x in dup)}). "
+                       "Số lượng đang có đã gồm các lệnh đó → khai thêm sẽ bị **tính trùng**. Hãy chọn một trong hai: "
+                       "xoá các lệnh cũ ở tab *Lịch sử & sửa*, hoặc không khai số dư cho mã này.")
+        if missing:
+            st.warning(f"Cần Giá vốn BQ hoặc Tổng vốn cho: {', '.join(missing)}")
+        if st.button(f"Lưu khai báo ({len(changes)} thay đổi)", type="primary", disabled=not changes or bool(missing),
+                     key=style.ic("device-floppy", "luusodu")):
+            res = [f"{code} {db.set_opening(c, code, q, avg, day)}" for code, q, avg, day in changes]
+            words = {"added": "đã thêm", "updated": "đã cập nhật", "deleted": "đã xoá", "none": "không đổi"}
+            ui.flash("Số dư đầu kỳ: " + ", ".join(f"{x.split()[0]} {words[x.split()[1]]}" for x in res))
+            st.rerun()
+        st.caption("Lãi/lỗ = (Giá hiện tại − Giá vốn) × Số lượng. XIRR của các mã này tính **từ ngày khai**, "
+                   "hiện sau 30 ngày. Ô mờ ghi None = chưa khai. Xoá trắng Số lượng để bỏ số dư đầu kỳ của mã đó.")
 
 # --------------------------------------------------------------- DCA
 with tab_dca:
@@ -60,7 +132,8 @@ with tab_other:
         t_tax = c8.number_input("Thuế (₫)", min_value=0.0, step=1000.0, format="%.0f")
         t_note = c9.text_input("Ghi chú")
         st.caption("Mua/Bán cổ phiếu: nhập Giá + Số lượng (+ Phí, Thuế khi bán). · Cổ tức TM: Số tiền. · "
-                   "Cổ tức CP/Thưởng: Số lượng. · Vốn đầu kỳ: tài sản có sẵn, không rõ ngày mua (không tính XIRR).")
+                   "Cổ tức CP/Thưởng: Số lượng. · Vốn đầu kỳ: Số lượng đang có + Giá vốn bình quân (dễ hơn: tab *Tài sản đang có*); "
+                   "XIRR tính từ ngày khai.")
         if st.form_submit_button("Lưu giao dịch", type="primary", key=style.ic("device-floppy", "luukhac")):
             held = next((r["qty"] for r in h["rows"] if r["code"] == t_code), 0) or 0
             err = None

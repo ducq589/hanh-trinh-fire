@@ -48,7 +48,8 @@ HUONG_DAN = [
     "• Mua quỹ mở: Ngày, Mã, Loại GD = Mua, Số tiền (để trống Giá & Số lượng nếu chưa biết – app tự tra NAV).",
     "• Mua cổ phiếu: Giá (VND/CP), Số lượng, Phí. Bán: Loại GD = Bán, Giá, Số lượng, Phí, Thuế.",
     "• Cổ tức tiền mặt: Loại GD = Cổ tức TM, Số tiền. Cổ tức cổ phiếu/thưởng: Loại GD = Cổ tức CP/Thưởng, Số lượng.",
-    "• Tài sản có từ trước, không rõ ngày mua (vàng, bảo hiểm…): Loại GD = Vốn đầu kỳ.",
+    "• ĐÃ CÓ tài sản từ trước, không muốn nhập lại từng lệnh: mỗi tài sản 1 dòng – Ngày = hôm nay, Loại GD = Vốn đầu kỳ, "
+    "Số lượng = số đang có, Giá = giá vốn bình quân (xem trong app Fmarket / app chứng khoán).",
     "• Các cột từ 'Giá dùng' trở sang phải tự tính – không nhập.",
     None,
     "4. SỔ TIẾT KIỆM, MỤC TIÊU, NỢ",
@@ -159,6 +160,10 @@ def build() -> Path:
         ws.sheet_view.tabSelected = ws.title == "HuongDan"
     wb.active = wb.sheetnames.index("HuongDan")
 
+    from openpyxl.comments import Comment
+    wb["GiaoDich"]["C1"].comment = Comment(
+        "Mua / Bán / Cổ tức TM (tiền mặt) / Cổ tức CP/Thưởng (chỉ tăng số lượng, vốn 0) / Vốn đầu kỳ (tài sản đã có, "
+        "không nhập lịch sử: Số lượng đang có + Giá vốn bình quân; XIRR tính từ ngày khai).", "Hành trình FIRE")
     # Ghi chú nhắc tới sổ tiết kiệm cụ thể → thay bằng hướng dẫn chung
     from openpyxl.comments import Comment
     wb["SoTietKiem"]["G1"].comment = Comment(

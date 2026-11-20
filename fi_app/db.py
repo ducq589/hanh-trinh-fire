@@ -310,6 +310,27 @@ def add_transaction(s: Store, date, code, type_, amount=None, price=None, qty=No
                        "VALUES (?,?,?,?,?,?,?,?,?)", (_d(date), code, type_, amount, price, qty, fee, tax, note))
 
 
+OPENING = "Vốn đầu kỳ"
+OPENING_NOTE = "Số dư đầu kỳ"
+
+
+def set_opening(s: Store, code: str, qty: float | None, avg_price: float | None, day) -> str:
+    """Khai số dư tài sản đang có (không cần lịch sử lệnh): mỗi mã đúng 1 dòng 'Vốn đầu kỳ'.
+
+    qty = số lượng đang nắm giữ, avg_price = giá vốn bình quân → Vốn = qty × giá.
+    qty trống/0 → xoá số dư đầu kỳ của mã. Trả về 'added' | 'updated' | 'deleted' | 'none'.
+    """
+    with s.tx():
+        n = s.x("DELETE FROM transactions WHERE code = ? AND type = ?", (code, OPENING))
+        if not qty:
+            return "deleted" if n else "none"
+        s.x("INSERT INTO transactions(date, code, type, amount, price, qty, fee, tax, note) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (_d(day), code, OPENING, round(qty * (avg_price or 0)) or None, avg_price or None, qty, None, None,
+             OPENING_NOTE))
+    return "updated" if n else "added"
+
+
 def upsert_price(s: Store, date, code, price, source="", is_manual=1) -> None:
     s.x("INSERT INTO prices(date, code, price, source, is_manual) VALUES (?,?,?,?,?) "
         "ON CONFLICT(date, code, is_manual) DO UPDATE SET price = excluded.price, source = excluded.source",

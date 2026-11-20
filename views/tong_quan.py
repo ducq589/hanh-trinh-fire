@@ -16,12 +16,13 @@ if not data["assets"]:
         st.html(style.steps([
             ("Khai thu chi", "Thu nhập, chi tiêu điển hình mỗi tháng/quý/năm – chỉ khai 1 lần."),
             ("Chọn tài sản", "Chọn quỹ, cổ phiếu, vàng từ danh mục – giá tự cập nhật hằng ngày."),
-            ("Ghi giao dịch mua", "Nhập các lần mua đã có, app tính lãi/lỗ và tiến độ FIRE."),
+            ("Khai tài sản đang có", "Đã mua từ trước? Chỉ cần <b>số lượng + giá vốn bình quân</b> "
+                                     "(tab <b>Tài sản đang có</b>) – không phải nhập lại từng lệnh."),
         ]))
         b1, b2, b3, b4 = st.columns(4)
         for col, (ic, page, label) in zip((b1, b2, b3, b4), (
                 ("receipt", "thu_chi", "1 · Thu chi"), ("briefcase", "tai_san", "2 · Tài sản"),
-                ("plus", "giao_dich", "3 · Giao dịch"), ("book", "huong_dan", "Xem hướng dẫn"))):
+                ("wallet", "giao_dich", "3 · Tài sản đang có"), ("book", "huong_dan", "Xem hướng dẫn"))):
             with col.container(key=style.ic(ic, f"start_{page}")):
                 st.page_link(f"views/{page}.py", label=label, width="stretch")
         st.caption("Thích khai trên Excel? Tải **file mẫu v4** ở trang **Sao lưu & Cài đặt**, điền xong tải lên 1 lần.")
@@ -107,13 +108,15 @@ with st.container(border=True):
     view = pd.DataFrame({
         "Tài sản": rows["name"], "Tầng": rows["tier"],
         "Giá trị hiện tại": rows["value"].map(ui.vnd), "Lãi/lỗ": rows["pnl"].map(ui.vnd),
-        "% Lãi/lỗ": rows["pnl_pct"].map(ui.pct), "XIRR": rows["xirr"].map(lambda x: ui.pct(x, 2)),
+        "% Lãi/lỗ": rows["pnl_pct"].map(ui.pct), "XIRR": [ui.xirr_label(r) for r in h["rows"]],
         "Tỷ trọng": rows["weight"] * 100, "Cảnh báo": rows["warning"],
     })
     st.dataframe(view, hide_index=True, width="stretch", column_config={
         "XIRR": st.column_config.TextColumn(help="Tỷ suất quy năm theo dòng tiền (– : không áp dụng)"),
         "Tỷ trọng": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100, color="#B6F36A"),
     })
+    if any(r.get("xirr_since") and r.get("xirr") is not None for r in h["rows"]):
+        st.caption(ui.XIRR_NOTE)
 
 soon = [s for s in h["savings"] if s["status"] in ("Sắp đáo hạn", "Quá hạn xử lý")]
 if soon:

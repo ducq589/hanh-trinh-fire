@@ -12,6 +12,7 @@ import math
 from collections import defaultdict
 
 BUY_LIKE = ("Mua", "Vốn đầu kỳ")
+XIRR_MIN_DAYS = 30          # số dư đầu kỳ: cần tối thiểu 30 ngày theo dõi mới hiện XIRR (ngắn hơn thì dao động quá mạnh)
 
 
 # ================================================================ helpers
@@ -152,6 +153,11 @@ class PriceBook:
         d = max(ds)
         return d, self.on(code, d)
 
+    def at_or_before(self, code: str, d: dt.date, max_days: int = 7) -> float | None:
+        """Giá thị trường gần nhất trong vòng max_days ngày tính tới ngày d (ngày nghỉ lễ, cuối tuần)."""
+        ds = [x for x in self._dates.get(code, ()) if x <= d and (d - x).days <= max_days]
+        return self.on(code, max(ds)) if ds else None
+
     def history(self, code: str) -> list[tuple[dt.date, float]]:
         return sorted((d, self.on(code, d)) for d in self._dates.get(code, ()))
 
@@ -227,7 +233,7 @@ def holdings(data: dict, today: dt.date | None = None) -> dict:
     for a in data["assets"]:
         code, val = a["code"], a.get("valuation") or "Thị trường"
         r = {**a, "qty": None, "cost": 0.0, "dividends": 0.0, "price_date": None, "price": None,
-             "value": 0.0, "xirr": None, "warning": ""}
+             "value": 0.0, "xirr": None, "xirr_since": None, "warning": ""}
         if val == "Sổ tiết kiệm":
             mine = [s for s in savs if s["code"] == code]
             r["cost"] = sum(s["base"] for s in mine)
@@ -243,10 +249,28 @@ def holdings(data: dict, today: dt.date | None = None) -> dict:
                 r["warning"] = "Chưa có giá" if mine else ""
             elif (today - r["price_date"]).days > stale_days:
                 r["warning"] = f"Giá cũ {(today - r['price_date']).days} ngày"
-            flows = [t for t in mine if t["cashflow"] != 0]
-            if r["price_date"] and flows and not any(t["type"] == "Vốn đầu kỳ" for t in mine):
-                r["xirr"] = xirr([t["cashflow"] for t in flows] + [r["value"]],
-                                 [t["d"] for t in flows] + [r["price_date"]])
+            opening = [t for t in mine if t["type"] == "Vốn đầu kỳ"]
+            if not opening:
+                flows = [(t["d"], t["cashflow"]) for t in mine if t["cashflow"] != 0]
+            else:
+                # Có số dư đầu kỳ (không nhập lịch sử lệnh): XIRR tính TỪ NGÀY KHAI BÁO, coi số dư như được
+                # "mua" theo giá thị trường ngày đó. Không có giá thị trường quanh ngày khai → không tính.
+                since = min(t["d"] for t in opening)
+                r["xirr_since"] = since
+                flows = []
+                for t in opening:
+                    mkt = book.at_or_before(code, t["d"])
+                    if mkt is None:
+                        flows = None
+                        break
+                    flows.append((t["d"], -t["qty_calc"] * mkt))
+                if flows is not None:
+                    flows += [(t["d"], t["cashflow"]) for t in mine
+                              if t["type"] != "Vốn đầu kỳ" and t["cashflow"] != 0 and t["d"] >= since]
+                    if r["price_date"] is None or (r["price_date"] - since).days < XIRR_MIN_DAYS:
+                        flows = None
+            if r["price_date"] and flows:
+                r["xirr"] = xirr([v for _, v in flows] + [r["value"]], [d for d, _ in flows] + [r["price_date"]])
         r["pnl"] = r["value"] - r["cost"] + r["dividends"]
         r["pnl_pct"] = r["pnl"] / r["cost"] if r["cost"] else 0.0
         r["fire_value"] = r["value"] if a.get("fire_include") else 0.0

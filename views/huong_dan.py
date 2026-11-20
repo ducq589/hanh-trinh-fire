@@ -108,9 +108,19 @@ with t2:
     ], start=2))
     go_to("tai_san", "Tài sản")
     st.html(style.steps([
-        ("Ghi giao dịch đã có", "Trang <b>Giao dịch</b> → tab <b>Giao dịch khác</b>: nhập các lần mua trước đây. "
-                                "Tài sản có sẵn không rõ ngày mua (vàng, bảo hiểm) chọn loại <b>Vốn đầu kỳ</b>."),
+        ("Ghi tài sản đang có", "Trang <b>Giao dịch</b>:"
+                                "<br>• <b>Không muốn nhập lại lịch sử</b> (đã mua nhiều lần): tab <b>Tài sản đang có</b> → "
+                                "điền <b>Số lượng đang có</b> và <b>Giá vốn bình quân</b> (xem trong app Fmarket/app chứng khoán) "
+                                "→ <b>Lưu khai báo</b>. Lãi/lỗ tính ngay; XIRR tính từ ngày khai."
+                                "<br>• <b>Muốn đủ lịch sử</b>: tab <b>Giao dịch khác</b>, nhập từng lần mua – XIRR chính xác từ đầu."),
     ], start=3))
+    st.graphviz_chart(style.flow(
+        [("q", "Có muốn nhập\\nlịch sử lệnh?"), ("a", "Tab Giao dịch khác\\nnhập từng lần mua"),
+         ("b", "Tab Tài sản đang có\\nSố lượng + Giá vốn BQ"), ("ok", "Lãi/lỗ, FIRE\\ntính ngay")],
+        edges=[("q", "a", "Có"), ("q", "b", "Không"), ("a", "ok", ""), ("b", "ok", "")],
+        highlight=("ok",)).replace('q [label="Có muốn nhập\\nlịch sử lệnh?"]',
+                                   'q [label="Có muốn nhập\\nlịch sử lệnh?", shape=diamond, fillcolor="#1C1C1C"]'),
+        width="content")
     go_to("giao_dich", "Giao dịch")
     st.html(style.steps([
         ("Kiểm tra giá", "Quỹ, cổ phiếu, vàng chọn từ danh mục đã có giá tự động. Trang <b>Giá</b>: chỉ cần điền "
@@ -181,7 +191,7 @@ with t3:
         "| **Bán** | Bán bớt tài sản | Giá + Số lượng + Phí + Thuế |\n"
         "| **Cổ tức TM** | Nhận cổ tức tiền mặt | Số tiền |\n"
         "| **Cổ tức CP/Thưởng** | Nhận cổ phiếu thưởng / cổ tức bằng cổ phiếu | Số lượng |\n"
-        "| **Vốn đầu kỳ** | Tài sản đã có, không rõ ngày mua | Giá vốn + Số lượng (không tính XIRR) |")
+        "| **Vốn đầu kỳ** | Tài sản đã có, không muốn nhập lịch sử lệnh | Số lượng đang có + Giá vốn BQ (XIRR tính từ ngày khai) |")
     st.html(style.tip("Nhập sai? Vào tab <b>Lịch sử & sửa</b>, sửa trực tiếp trong bảng (hoặc chọn dòng → biểu tượng thùng rác) rồi bấm "
                       "<b>Lưu thay đổi</b>."))
 

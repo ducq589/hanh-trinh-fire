@@ -27,11 +27,14 @@ def _add(asset: dict):
             ok = False
     ui.flash(f"Đã thêm {asset['code']} – {asset['name']}. "
              + ("Đã lấy giá tự động." if ok else "Chưa lấy được giá lúc này, app sẽ thử lại khi mở lần sau.")
-             + " Bước tiếp: ghi giao dịch mua ở trang Giao dịch.")
+             + " Đã mua từ trước? Khai số lượng & giá vốn ở Giao dịch → Tài sản đang có.")
     st.rerun()
 
 
 existing = {a["code"] for a in data["assets"]}
+if data["assets"] and not data["transactions"]:
+    with st.container(key=style.ic("wallet", "lk_sodu")):
+        st.page_link("views/giao_dich.py", label="Đã có sẵn CCQ/cổ phiếu? Khai số lượng & giá vốn – không cần nhập lịch sử lệnh")
 with st.container(border=True, key="them_ts"):
     st.subheader("Thêm tài sản")
     st.caption("Chọn từ danh mục có sẵn → app tự điền loại, tầng, lợi suất kỳ vọng và **nguồn giá tự động**. "
@@ -157,7 +160,7 @@ rows = pd.DataFrame(h["rows"])
 st.dataframe(pd.DataFrame({
     "Mã": rows["code"], "Số lượng": rows["qty"], "Vốn thuần": rows["cost"], "Cổ tức": rows["dividends"],
     "Ngày giá": rows["price_date"], "Giá mới nhất": rows["price"], "Giá trị": rows["value"],
-    "Lãi/lỗ": rows["pnl"], "% Lãi/lỗ": rows["pnl_pct"] * 100, "XIRR": rows["xirr"].map(lambda x: ui.pct(x, 2)),
+    "Lãi/lỗ": rows["pnl"], "% Lãi/lỗ": rows["pnl_pct"] * 100, "XIRR": [ui.xirr_label(r) for r in h["rows"]],
     "Tính FIRE": rows["fire_value"],
 }), hide_index=True, width="stretch", column_config={
     "Số lượng": st.column_config.NumberColumn(format="%.2f"),
@@ -167,7 +170,7 @@ st.dataframe(pd.DataFrame({
     "% Lãi/lỗ": st.column_config.NumberColumn(format="%.1f%%"),
 })
 st.caption("Vốn thuần = tiền mua (gồm phí) − tiền bán thu về. Lãi/lỗ = Giá trị − Vốn thuần + Cổ tức tiền mặt. "
-           "XIRR không tính cho tài sản có dòng 'Vốn đầu kỳ'.")
+           "Tài sản khai số dư đầu kỳ: XIRR tính từ ngày khai (sau 30 ngày), đánh dấu *.")
 
 st.subheader("Tái cân bằng")
 tg = [r for r in h["rows"] if r["target_weight"]]

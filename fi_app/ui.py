@@ -176,3 +176,13 @@ def show_flash():
     f = st.session_state.pop("_flash", None)
     if f:
         st.toast(f[0], icon=f[1]) if f[1] else st.toast(f[0])
+
+
+def xirr_label(r: dict) -> str:
+    """XIRR hiển thị; mã khai số dư đầu kỳ ghi kèm '*' (tính từ ngày khai báo)."""
+    if r.get("xirr") is None:
+        return "–"
+    return pct(r["xirr"], 2) + (" *" if r.get("xirr_since") else "")
+
+
+XIRR_NOTE = "\\* XIRR tính từ ngày khai số dư đầu kỳ (không có lịch sử lệnh trước đó)."

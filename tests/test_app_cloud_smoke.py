@@ -38,8 +38,13 @@ def entry(tmp_path):
     db.set_kv(s, "meta", {"last_auto_fetch": "2099-01-01T00:00:00"})     # không gọi mạng lấy giá
     f = ROOT / f"_test_entry_{os.getpid()}.py"                          # cùng thư mục app.py để tìm views/
     f.write_text(ENTRY % str(dbfile), encoding="utf-8")
-    yield f
-    f.unlink(missing_ok=True)
+    from fi_app import ui
+    saved = (db.connect_cloud, ui.cloud_config)          # script test thay 2 hàm này → khôi phục cho test khác
+    try:
+        yield f
+    finally:
+        db.connect_cloud, ui.cloud_config = saved
+        f.unlink(missing_ok=True)
 
 
 def test_all_pages_render_when_logged_in(entry):

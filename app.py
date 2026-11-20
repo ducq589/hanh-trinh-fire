@@ -50,6 +50,7 @@ pages = {
         st.Page("views/thu_chi.py", title="Thu chi"),
     ],
     "Hệ thống": [
+        st.Page("views/gioi_thieu.py", title="Giới thiệu"),
         st.Page("views/huong_dan.py", title="Hướng dẫn"),
         st.Page("views/sao_luu.py", title="Sao lưu & Cài đặt"),
     ],

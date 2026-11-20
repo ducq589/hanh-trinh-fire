@@ -10,7 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGES = ["tong_quan", "ke_hoach_fire", "lich_su", "giao_dich", "gia", "tai_san", "tiet_kiem", "thu_chi",
-         "huong_dan", "sao_luu"]
+         "gioi_thieu", "huong_dan", "sao_luu"]
 
 ENTRY = '''
 import pathlib, time, streamlit as st
@@ -59,3 +59,32 @@ def test_all_pages_render_when_logged_in(entry):
             assert not at.exception, f"{p}: {at.exception[0].value}"
     finally:
         os.chdir(cwd)
+
+
+def test_login_screen_shows_intro_and_promise(tmp_path):
+    """Chưa đăng nhập: màn hình đăng nhập có phần giới thiệu ngắn và cam kết không khuyến nghị đầu tư."""
+    from streamlit.testing.v1 import AppTest
+    from fi_app import db, ui
+    f = ROOT / f"_test_login_{os.getpid()}.py"
+    f.write_text('''
+import streamlit as st
+from fi_app import ui
+ui.cloud_config = lambda: {"url": "https://x.supabase.co", "anon_key": "anon", "db_url": "postgres://unused"}
+st.session_state["_bridge_skip"] = True          # trong test không có trình duyệt chạy JS cầu nối
+exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
+''', encoding="utf-8")
+    saved = (db.connect_cloud, ui.cloud_config)
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        at = AppTest.from_file(str(f), default_timeout=60).run()
+        assert not at.exception, at.exception[0].value
+        page = " ".join(str(getattr(e, "value", "")) for e in at.main)
+        texts = [m.value for m in at.markdown] + [c.value for c in at.caption]
+        assert any("Nhìn rõ con đường" in t for t in texts)
+        assert any(x.label.startswith("Về Hành trình FIRE") for x in at.expander)
+        assert page is not None
+    finally:
+        db.connect_cloud, ui.cloud_config = saved
+        os.chdir(cwd)
+        f.unlink(missing_ok=True)

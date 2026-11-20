@@ -34,6 +34,8 @@ with t1:
         edges=[("a", "b", ""), ("b", "c", ""), ("c", "d", ""), ("d", "e", ""), ("e", "c", "lặp lại")],
         highlight=("e",)), width="stretch")
 
+    st.html(style.tip("Muốn hiểu vì sao có app, app đồng hành thế nào và cam kết <b>không giữ tiền, không khuyến nghị "
+                      "đầu tư</b>? Đọc trang <b>Hệ thống → Giới thiệu</b>."))
     st.subheader("Đăng nhập")
     l, r = st.columns([3, 2], gap="large")
     with l:

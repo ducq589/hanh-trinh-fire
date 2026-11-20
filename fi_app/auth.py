@@ -204,6 +204,17 @@ def login_screen(cfg: dict) -> None:
                 st.session_state["_login_step"] = "email"
                 st.rerun()
         st.caption("Dữ liệu của mỗi tài khoản được tách riêng; người khác không xem được dữ liệu của bạn.")
+        from . import intro
+        intro.css()
+        st.markdown(f"#### {intro.TAGLINE}")
+        intro.values(one=True)
+        st.html(f'<span class="pill">{_s.svg("circle-check", 16, _s.LIME)}{intro.PROMISE_SHORT}</span>')
+        st.write("")
+        with st.expander("Về Hành trình FIRE – vì sao có app này?", key=_s.ic("info-circle", "intro_login")):
+            intro.why_story(short=True)
+            intro.promise_card(one=True)
+            st.markdown("**Câu hỏi thường gặp**")
+            intro.faq()
         with st.expander("Lần đầu dùng app? Xem cách đăng nhập"):
             from . import style
             st.html(style.steps([

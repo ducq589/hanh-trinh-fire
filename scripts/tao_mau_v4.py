@@ -89,14 +89,26 @@ def _shrink(ws, tname: str) -> None:
         t.autoFilter.ref = t.ref
 
 
-def _strip_chart_cache(src: Path, dst: Path) -> None:
-    """Biểu đồ lưu sẵn số liệu cũ (numCache/strCache) → xoá để không lộ dữ liệu; Excel tự vẽ lại khi mở."""
+_FI_WORD = re.compile(r"(?<![\w#&])FI(?!\w)")
+
+
+def _fire(text: str) -> str:
+    """Đổi thuật ngữ FI → FIRE (tên sheet, tiêu đề cột bảng, công thức, ghi chú) cho thống nhất với app."""
+    return _FI_WORD.sub("FIRE", text.replace("FI_Plan", "FIRE_Plan"))
+
+
+def _postprocess(src: Path, dst: Path) -> None:
+    """- Biểu đồ lưu sẵn số liệu cũ (numCache/strCache) → xoá để không lộ dữ liệu; Excel tự vẽ lại khi mở.
+    - Đổi FI → FIRE ở mọi phần XML (đổi đồng loạt nên tham chiếu sheet/cột bảng vẫn khớp nhau)."""
     cache = re.compile(r"<(?:c:)?(numCache|strCache)>.*?</(?:c:)?\1>", re.S)
     with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zout:
         for item in zin.infolist():
             data = zin.read(item.filename)
-            if item.filename.startswith("xl/charts/"):
-                data = cache.sub("", data.decode("utf-8")).encode("utf-8")
+            if item.filename.endswith((".xml", ".vml")):
+                text = data.decode("utf-8")
+                if item.filename.startswith("xl/charts/"):
+                    text = cache.sub("", text)
+                data = _fire(text).encode("utf-8")
             zout.writestr(item, data)
 
 
@@ -155,7 +167,7 @@ def build() -> Path:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     tmp = OUT.with_suffix(".tmp.xlsx")
     wb.save(tmp)
-    _strip_chart_cache(tmp, OUT)
+    _postprocess(tmp, OUT)
     tmp.unlink()
     shutil.copyfile(OUT, COPY)
     return OUT

@@ -154,7 +154,8 @@ def import_v3(store: db.Store, path=V3_PATH) -> dict:
         counts["snapshots"] = n
 
     # Giả định FIRE (FI_Plan B4:B10) – ô lợi suất danh nghĩa: nếu là công thức thì để "tự tính"
-    fi_v, fi_f = wb["FI_Plan"], wf["FI_Plan"]
+    plan = "FIRE_Plan" if "FIRE_Plan" in wb.sheetnames else "FI_Plan"     # mẫu v4 đổi tên sheet
+    fi_v, fi_f = wb[plan], wf[plan]
     ret_formula = isinstance(fi_f["B7"].value, str) and str(fi_f["B7"].value).startswith("=")
     prof = wb["Profile"]["B3"].value
     db.set_kv(conn, "assumptions", {

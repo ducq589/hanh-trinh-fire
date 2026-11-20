@@ -134,6 +134,10 @@ def test_celebration_ack_and_intro_tabs(seeded):
         assert "Chúc mừng – mốc mới!" not in " ".join(str(h.proto.body) for h in at.get("html"))
         seen = json.loads(db.kv(db.connect_local(dbfile), "settings")["milestones_seen"])
         assert "setup_asset" in seen and "fire_1" not in seen
+        at.switch_page("views/thu_chi.py").run()
+        assert not at.exception, at.exception[0].value
+        assert any("Nền tảng tài chính" in x.value for x in at.subheader)
+        assert sum(x.label[:1].isdigit() and " · " in x.label for x in at.expander) == 5
         at.switch_page("views/gioi_thieu.py").run()
         assert not at.exception, at.exception[0].value
         assert [t.label for t in at.tabs] == ["Về app", "Tính năng", "Câu chuyện", "Hành trình", "Ví dụ tính", "Hỏi đáp"]

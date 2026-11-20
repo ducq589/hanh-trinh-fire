@@ -619,3 +619,15 @@ def new_milestones(ms: list[dict], seen: dict) -> list[dict]:
     fresh = [m for m in ms if m["reached"] and m["key"] not in seen]
     rank = {"Hành trình FIRE": 0, "Thiết lập": 1, "Nền móng": 2}
     return sorted(fresh, key=lambda m: (rank[m["group"]], -ms.index(m)))
+
+
+# ================================================================ ngân sách so với các quy tắc (bài học Thu chi)
+def budget_check(cf: dict) -> dict | None:
+    """Tỷ lệ theo hồ sơ thu chi để so với 50/30/20 và 'trả cho mình trước'. None khi chưa có thu nhập."""
+    inc = cf["income"]
+    if not inc:
+        return None
+    save = cf["invest"] + max(0.0, cf["after_invest"])
+    return {"essential": cf["essential"] / inc, "flexible": cf["flexible"] / inc, "save": save / inc,
+            "pay_first": cf["invest"] / inc,
+            "buffer_low": cf["expense"] * 0.05, "buffer_high": cf["expense"] * 0.10}

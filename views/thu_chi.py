@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from fi_app import db, engine, style, ui
+from fi_app import db, engine, lessons, style, ui
 
 c, data, h, fp = ui.state()
 style.title("cash", "Hồ sơ thu chi")
@@ -64,3 +64,6 @@ fig = px.bar(g, x="Số tiền", y=["Thu nhập"] * len(g), color="Khoản", ori
 fig.update_layout(height=170, margin=dict(t=10, b=10), barmode="stack", legend=dict(orientation="h", y=-0.4),
                   xaxis_tickformat=",.0f")
 st.plotly_chart(style.fig(fig).update_layout(legend=dict(y=-0.4)), width="stretch")
+
+st.write("")
+lessons.render(cf)

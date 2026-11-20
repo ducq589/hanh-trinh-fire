@@ -5,10 +5,15 @@
 """
 import streamlit as st
 
-from fi_app import auth, db, engine, prices, style, ui
+from fi_app import auth, db, engine, legal, prices, style, ui
 
 st.set_page_config(page_title="Hành trình FIRE", page_icon="🔥", layout="wide")
 style.apply()
+
+# Trang công khai (không cần đăng nhập): Chính sách quyền riêng tư / Điều khoản sử dụng – ?doc=privacy | ?doc=terms
+if st.query_params.get("doc") in legal.DOCS:
+    legal.render(st.query_params["doc"])
+    st.stop()
 
 store = ui.store(entry=True)   # cloud: hiện màn hình đăng nhập nếu chưa đăng nhập
 

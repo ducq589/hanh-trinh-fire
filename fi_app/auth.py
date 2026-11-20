@@ -355,6 +355,8 @@ def login_screen(cfg: dict) -> None:
                 ("Nhập mã", "Giữ ô <b>Ghi nhớ đăng nhập</b> để lần sau vào thẳng, rồi bấm <b>Đăng nhập</b>."),
                 ("Sau khi vào", "Mở <b>Hệ thống → Hướng dẫn</b> để xem các bước thiết lập và sử dụng."),
             ]))
+        from . import legal
+        st.html(legal.links_html())
 
 
 def logout(cfg: dict | None = None) -> None:

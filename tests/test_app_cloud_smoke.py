@@ -87,9 +87,44 @@ exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
         assert any(x.label.startswith("Về Hành trình FIRE") for x in at.expander)
         assert page is not None
         assert any("tạo tài khoản mới" in t for t in texts)                    # đang mở đăng ký
+        assert any("?doc=privacy" in str(h.proto.body) for h in at.get("html"))  # trang chủ có link chính sách
         links = [b.proto.label for b in at.get("link_button")]
         assert ("Đăng nhập bằng Google" in links) is google
     finally:
         db.connect_cloud, ui.cloud_config = saved
+        os.chdir(cwd)
+        f.unlink(missing_ok=True)
+
+
+@pytest.mark.parametrize("doc,title", [("privacy", "Chính sách quyền riêng tư"), ("terms", "Điều khoản sử dụng")])
+@pytest.mark.parametrize("email", ["lienhe@example.com", ""])
+def test_public_legal_pages_without_login(doc, title, email):
+    """?doc=privacy / ?doc=terms mở được khi CHƯA đăng nhập (Google OAuth yêu cầu), không hiện form đăng nhập."""
+    from streamlit.testing.v1 import AppTest
+    f = ROOT / f"_test_doc_{os.getpid()}.py"
+    f.write_text('''
+import streamlit as st
+st.query_params["doc"] = %r
+exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
+''' % doc, encoding="utf-8")
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        secrets = {"supabase": {"url": "https://x.supabase.co", "anon_key": "anon", "db_url": "postgres://unused",
+                                "site_url": "https://app.example", "contact_email": email}}
+        at = AppTest.from_file(str(f), default_timeout=60)
+        for k, v in secrets.items():
+            at.secrets[k] = v
+        at.run()
+        assert not at.exception, at.exception[0].value
+        body = " ".join(m.value for m in at.markdown)
+        html = " ".join(str(h.proto.body) for h in at.get("html"))
+        assert title in html
+        assert "Gửi mã đăng nhập" not in " ".join(b.label for b in at.button)      # không có form đăng nhập
+        assert (email in body) if email else ("người quản trị app" in body)
+        assert "https://app.example/?doc=" in html                                # link tuyệt đối, mở cửa sổ chính
+        if doc == "terms":
+            assert "Không khuyến nghị" in body
+    finally:
         os.chdir(cwd)
         f.unlink(missing_ok=True)

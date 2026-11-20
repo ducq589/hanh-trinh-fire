@@ -2,7 +2,7 @@
 import plotly.graph_objects as go
 import streamlit as st
 
-from fi_app import engine, intro, style, ui
+from fi_app import engine, intro, legal, style, ui
 
 intro.css()
 style.title("info-circle", "Giới thiệu Hành trình FIRE", intro.TAGLINE)
@@ -61,3 +61,4 @@ intro.faq()
 st.write("")
 with st.container(key=style.ic("rocket", "intro_start")):
     st.page_link("views/huong_dan.py", label="Bắt đầu: xem Hướng dẫn thiết lập lần đầu", width="stretch")
+st.html(legal.links_html())

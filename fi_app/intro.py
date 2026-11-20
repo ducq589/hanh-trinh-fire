@@ -118,6 +118,77 @@ FAQ = [  # (câu hỏi, trả lời – markdown)
      "Có. Trang **Sao lưu & Cài đặt** → **Tạo báo cáo Excel** để tải toàn bộ dữ liệu về máy bất cứ lúc nào."),
 ]
 
+FEATURES = [  # (nhóm, [(icon, tiêu đề, mô tả, trang hoặc None, tên ngắn)])
+    ("Theo dõi tài sản", [
+        ("refresh", "Giá tự cập nhật mỗi ngày",
+         "NAV chứng chỉ quỹ (Fmarket), cổ phiếu/ETF (VNDirect), vàng (PNJ) – không phải gõ giá tay.", "gia",
+         "giá tự cập nhật"),
+        ("chart-pie", "Tháp tài sản 4 tầng",
+         "Tăng trưởng · Thu nhập · Bảo vệ · Phòng thủ – thấy ngay cơ cấu và tỷ trọng danh mục.", "tong_quan",
+         "tháp tài sản 4 tầng"),
+        ("trending-up", "Lãi/lỗ & XIRR từng tài sản",
+         "Lợi suất thực theo dòng tiền (tính cả cổ tức, mua nhiều lần), không chỉ % lãi đơn giản.", "tai_san",
+         "lãi/lỗ & XIRR"),
+        ("adjustments", "Tái cân bằng theo tỷ lệ bạn tự đặt",
+         "Cần bổ sung bao nhiêu cho mỗi tài sản để danh mục về đúng tỷ lệ mục tiêu <b>của bạn</b>.", "tai_san",
+         "tái cân bằng"),
+    ]),
+    ("Kế hoạch FIRE", [
+        ("target", "Số FIRE & năm đạt được",
+         "Lean / Coast / Full FIRE, năm và tuổi dự kiến – tính từ thu chi và tài sản thật của bạn.", "ke_hoach_fire",
+         "Số FIRE & năm đạt"),
+        ("bulb", "“Nếu… thì sao?”",
+         "Thử tăng đầu tư hoặc giảm chi tiêu, xem năm đạt FIRE sớm hơn bao nhiêu.", "ke_hoach_fire",
+         "thử kịch bản"),
+        ("circle-check", "Sức khoẻ tài chính",
+         "Chấm quỹ khẩn cấp, tỷ lệ tiết kiệm, nợ, bảo hiểm theo mốc tham khảo – nền móng trước khi tăng tốc.",
+         "ke_hoach_fire", "sức khoẻ tài chính"),
+        ("trophy", "Thành tựu & lời động viên",
+         "Ghi nhận từng mốc bạn đạt: hoàn tất thiết lập, 1% → 100% Số FIRE, quỹ khẩn cấp đủ, chuỗi theo dõi đều đặn.",
+         "tong_quan", "thành tựu & động viên"),
+    ]),
+    ("Ghi chép nhẹ nhàng", [
+        ("receipt", "Hồ sơ thu chi khai một lần",
+         "Số tiền điển hình theo tháng/quý/năm, rà soát mỗi quý – không ghi chi tiêu hằng ngày.", "thu_chi",
+         "thu chi khai 1 lần"),
+        ("plus", "Mua DCA nhanh 30 giây",
+         "Ghi lần mua định kỳ trong vài chạm; đã có tài sản từ trước thì chỉ khai số lượng + giá vốn.", "giao_dich",
+         "ghi DCA nhanh"),
+        ("pig-money", "Sổ tiết kiệm, mục tiêu & nợ",
+         "Theo dõi từng sổ, nhắc đáo hạn; quỹ cho mục tiêu cần tiền (Sinking Fund); các khoản vay.", "tiet_kiem",
+         "sổ tiết kiệm & nợ"),
+        ("camera", "Snapshot tự động mỗi tháng",
+         "App tự chụp tài sản ròng đầu mỗi tháng – nhìn lại chặng đường đã đi.", "lich_su", "snapshot hằng tháng"),
+    ]),
+    ("An toàn & tiện lợi", [
+        ("bell", "Nhắc việc tự động",
+         "Giá cũ, sổ sắp đáo hạn, đến hạn rà soát thu chi, mục tiêu còn thiếu.", "tong_quan", "nhắc việc"),
+        ("file-spreadsheet", "Excel vào / ra",
+         "Mẫu v4 để khai ban đầu; xuất toàn bộ dữ liệu ra Excel bất cứ lúc nào.", "sao_luu", "Excel vào/ra"),
+        ("login", "Đăng nhập email hoặc Google",
+         "Ghi nhớ 30 ngày, cài lên màn hình điện thoại như một app.", None, "đăng nhập Google"),
+        ("user", "Dữ liệu của riêng bạn",
+         "Mỗi tài khoản tách riêng, không bán, không chia sẻ dữ liệu.", None, "dữ liệu riêng tư"),
+    ]),
+]
+
+# Lời động viên theo mốc: key → (tiêu đề, lời nhắn). Không nhắc mã/sản phẩm/lời khuyên đầu tư.
+MILESTONE_TEXT = {
+    "setup_cf": ("Đã khai thu chi", "Bước đầu tiên đã xong – bạn đã nhìn rõ dòng tiền của mình!"),
+    "setup_asset": ("Tài sản đầu tiên", "Tài sản đầu tiên đã vào danh mục. Hành trình nghìn dặm bắt đầu từ bước chân này."),
+    "setup_done": ("Hoàn tất thiết lập", "Hoàn tất 5/5 bước! Từ giờ app đồng hành cùng bạn mỗi tháng."),
+    "fire_1": ("Chạm 1% Số FIRE", "1% đầu tiên là khó nhất – bạn đã thực sự lên đường."),
+    "fire_5": ("Chạm 5% Số FIRE", "5% chặng đường – thói quen tích luỹ đang thành hình."),
+    "fire_10": ("Chạm 10% Số FIRE", "Chạm 10% Số FIRE – lãi kép bắt đầu làm việc cho bạn."),
+    "fire_25": ("Chạm 25% Số FIRE", "Một phần tư chặng đường! Sự kiên trì của bạn đang được đền đáp."),
+    "fire_50": ("Nửa chặng đường", "50% Số FIRE! Phần còn lại thường đi nhanh hơn nhờ lãi kép."),
+    "fire_75": ("Chạm 75% Số FIRE", "Ba phần tư chặng đường – đích đến đã ở rất gần."),
+    "fire_100": ("Đạt Full FIRE", "Chúc mừng bạn đã đạt Full FIRE – tự do lựa chọn cách sống!"),
+    "em_full": ("Quỹ khẩn cấp đủ", "Lớp đệm an toàn đã đủ – bạn vững vàng hơn trước mọi biến cố."),
+    "save_20": ("Tiết kiệm ≥ 20%", "Tiết kiệm từ 20% thu nhập – một thói quen của người tự do tài chính."),
+    "streak_6": ("6 tháng đều đặn", "6 tháng theo dõi liên tục – kỷ luật là tài sản lớn nhất."),
+}
+
 EXAMPLE_NOTE = ("Số liệu chỉ để minh hoạ cách tính, dùng lợi suất <b>giả định</b> đã trừ lạm phát – không phải cam kết "
                 "lợi nhuận hay khuyến nghị đầu tư. Kết quả thực tế phụ thuộc thị trường và kỷ luật của bạn.")
 
@@ -196,3 +267,22 @@ def faq() -> None:
     for q, a in FAQ:
         with st.expander(q):
             st.markdown(a)
+
+
+def features(compact: bool = False) -> None:
+    """Tính năng nổi bật. compact=True: mỗi nhóm một dòng (màn hình đăng nhập)."""
+    if compact:
+        st.html('<div class="story">' + "".join(
+            f"<p><b>{style.esc(g)}:</b> {' · '.join(style.esc(x[4]) for x in items)}</p>" for g, items in FEATURES)
+            + "</div>")
+        return
+    for gi, (group, items) in enumerate(FEATURES):
+        st.markdown(f"##### {group}")
+        for row in range(0, len(items), 2):
+            cols = st.columns(2)
+            for j, (col, (ic, t, d, page, _)) in enumerate(zip(cols, items[row:row + 2])):
+                with col:
+                    st.html(_cards([(ic, t, d)], one=True))
+                    if page:
+                        with st.container(key=style.ic("arrow-right", f"feat_{gi}_{row + j}")):
+                            st.page_link(f"views/{page}.py", label="Mở trang")

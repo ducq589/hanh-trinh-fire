@@ -252,3 +252,75 @@ def health_summary(data: dict, h: dict, fp: dict) -> tuple[int, int]:
     items = engine.health(data, h, fp)
     known = [x for x in items if x["status"] != "na"]
     return sum(x["status"] == "good" for x in known), len(known)
+
+
+# ---------------------------------------------------------------- thành tựu & lời động viên
+def _seen(data: dict) -> dict:
+    import json
+    try:
+        v = json.loads(data["settings"].get("milestones_seen") or "{}")
+        return v if isinstance(v, dict) else {}
+    except ValueError:
+        return {}
+
+
+def _ms_text(key: str) -> tuple[str, str]:
+    from . import intro
+    return intro.MILESTONE_TEXT[key]
+
+
+def celebrate(c, data: dict, h: dict, fp: dict) -> None:
+    """Khung chúc mừng mốc mới đạt (chỉ mốc cao nhất, kèm 'bạn cũng vừa đạt'); bấm Cảm ơn! để ghi nhận."""
+    import json
+    from . import style
+    seen = _seen(data)
+    fresh = engine.new_milestones(engine.milestones(data, h, fp), seen)
+    if not fresh:
+        return
+    top = fresh[0]
+    title, msg = _ms_text(top["key"])
+    st.html(style.celebration(title, msg, [_ms_text(m["key"])[0] for m in fresh[1:]]))
+    flag = "_balloons_" + ",".join(m["key"] for m in fresh)
+    if not st.session_state.get(flag):          # hiệu ứng 1 lần mỗi phiên, không lặp khi trang chạy lại
+        st.session_state[flag] = True
+        st.balloons()
+    if st.button("Cảm ơn!", key=style.ic("trophy", "ms_ack"), type="primary"):
+        today = dt.date.today().isoformat()
+        seen.update({m["key"]: today for m in fresh})
+        db.set_kv(c, "settings", {"milestones_seen": json.dumps(seen)})
+        st.rerun()
+
+
+def next_milestones(data: dict, h: dict, fp: dict) -> list[dict]:
+    """Mốc kế tiếp của từng nhóm còn mốc chưa đạt."""
+    ms = engine.milestones(data, h, fp)
+    out = []
+    for g in ("Thiết lập", "Hành trình FIRE", "Nền móng"):
+        m = engine.next_milestone([x for x in ms if x["group"] == g])
+        if m:
+            out.append({**m, "title": _ms_text(m["key"])[0]})
+    return out
+
+
+def achievements(data: dict, h: dict, fp: dict) -> None:
+    """Huy hiệu các mốc (đã đạt sáng màu + ngày) và thẻ mốc kế tiếp."""
+    from . import style
+    seen = _seen(data)
+    ms = engine.milestones(data, h, fp)
+    groups = []
+    for g in ("Thiết lập", "Hành trình FIRE", "Nền móng"):
+        items = [(_ms_text(m["key"])[0], m["reached"] or m["key"] in seen,
+                  _fmt_day(seen.get(m["key"]))) for m in ms if m["group"] == g]
+        groups.append((g, items))
+    st.html(style.badges(groups))
+    nxt = next_milestones(data, h, fp)
+    if nxt:
+        st.markdown("**Mốc kế tiếp**")
+        st.html(style.next_cards(nxt))
+    else:
+        st.success("Bạn đã đạt mọi mốc – thật tuyệt vời!")
+
+
+def _fmt_day(iso: str | None) -> str:
+    dd = engine.to_date(iso)
+    return f"{dd:%d/%m/%Y}" if dd else ""

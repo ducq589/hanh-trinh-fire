@@ -363,6 +363,8 @@ def login_screen(cfg: dict) -> None:
         st.write("")
         with st.expander("Về Hành trình FIRE – vì sao có app này?", key=_s.ic("info-circle", "intro_login")):
             intro.why_story(short=True)
+            st.markdown("**Tính năng nổi bật**")
+            intro.features(compact=True)
             intro.promise_card(one=True)
             st.markdown("**Câu hỏi thường gặp**")
             intro.faq()

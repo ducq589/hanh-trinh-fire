@@ -56,6 +56,9 @@ ms = pd.DataFrame([
 st.dataframe(ms.assign(**{"Cần có": ms["Cần có"].map(ui.vnd), "Tiến độ": ms["Tiến độ"].map(ui.pct),
                           "Số năm nữa": ms["Số năm nữa"].map(lambda x: ui.num(x, 1) if x is not None else "–")}),
              hide_index=True, width="stretch")
+nxt = [m for m in ui.next_milestones(data, h, fp) if m["group"] == "Hành trình FIRE"]
+if nxt:
+    st.caption(f"**Mốc kế tiếp:** {nxt[0]['title']} – {nxt[0]['gap']}. Xem mọi thành tựu ở trang **Tổng quan**.")
 c1, c2, c3 = st.columns(3)
 c1.metric("Tài sản tính FIRE (ròng)", ui.tr(fp["assets"]), help=ui.vnd(fp["assets"]))
 c2.metric("Đầu tư mỗi tháng", ui.tr(fp["invest"]), help="Khoản 'Đầu tư định kỳ' trong trang Thu chi")

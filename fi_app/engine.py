@@ -550,3 +550,72 @@ def health(data: dict, h: dict, fp: dict) -> list[dict]:
         "Có bảo hiểm sức khoẻ/nhân thọ phù hợp",
         "Cân nhắc bảo hiểm sức khoẻ/nhân thọ; nếu đã có, khai ở trang Tài sản (loại Bảo hiểm)", "tai_san")
     return out
+
+
+# ================================================================ thành tựu (mốc để động viên)
+FIRE_STEPS = (0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 1.0)
+STREAK_TARGET = 6
+
+
+def _short(x: float) -> str:
+    return (f"{x / 1e9:,.2f} tỷ" if abs(x) >= 1e9 else f"{x / 1e6:,.1f} tr").replace(".", ",")
+
+
+def snapshot_streak(snapshots: list[dict], today: dt.date | None = None) -> int:
+    """Số tháng Snapshot liên tiếp tính tới tháng này (tháng này chưa chụp thì tính tới tháng trước)."""
+    today = today or dt.date.today()
+    months = {str(s["date"])[:7] for s in snapshots}
+    y, m = today.year, today.month
+    if f"{y:04d}-{m:02d}" not in months:
+        y, m = (y - 1, 12) if m == 1 else (y, m - 1)
+    k = 0
+    while f"{y:04d}-{m:02d}" in months:
+        k += 1
+        y, m = (y - 1, 12) if m == 1 else (y, m - 1)
+    return k
+
+
+def milestones(data: dict, h: dict, fp: dict, today: dt.date | None = None) -> list[dict]:
+    """Các mốc theo thứ tự tăng dần trong từng nhóm. Mỗi mốc: key, group, reached, progress (0–1), gap (chuỗi)."""
+    out: list[dict] = []
+
+    def add(key, group, reached, progress=None, gap=""):
+        out.append({"key": key, "group": group, "reached": bool(reached),
+                    "progress": 1.0 if reached else max(0.0, min(1.0, progress or 0.0)), "gap": "" if reached else gap})
+
+    steps = onboarding(data, fp)
+    done = sum(s["done"] for s in steps)
+    add("setup_cf", "Thiết lập", steps[0]["done"], 0, "Khai thu nhập và chi tiêu ở trang Thu chi")
+    add("setup_asset", "Thiết lập", bool(data["assets"]), 0, "Thêm tài sản đầu tiên ở trang Tài sản")
+    add("setup_done", "Thiết lập", done == len(steps), done / len(steps), f"Còn {len(steps) - done} bước thiết lập")
+
+    target, assets = fp["fire_number"], fp["assets"]
+    for p in FIRE_STEPS:
+        reached = bool(target) and assets >= target * p
+        gap = (f"Còn {_short(target * p - assets)} để chạm {p:.0%} Số FIRE" if target
+               else "Khai thu chi để app tính Số FIRE")
+        add(f"fire_{round(p * 100)}", "Hành trình FIRE", reached, (assets / (target * p)) if target else 0, gap)
+
+    em, tgt = fp["emergency_months"], fp["emergency_target"]
+    add("em_full", "Nền móng", em is not None and em >= tgt, (em or 0) / tgt if tgt else 0,
+        f"Còn {_short(fp['emergency_gap'])} để quỹ khẩn cấp đủ {tgt:.0f} tháng" if em is not None
+        else "Tạo tài sản quỹ khẩn cấp (mã QKC) và khai chi thiết yếu")
+    sr = fp["cf"]["savings_rate"] if fp["cf"]["income"] else 0.0
+    add("save_20", "Nền móng", fp["cf"]["income"] > 0 and sr >= 0.20, sr / 0.20,
+        f"Tỷ lệ tiết kiệm hiện {sr:.0%}, mục tiêu 20%" if fp["cf"]["income"] else "Khai thu chi để tính tỷ lệ tiết kiệm")
+    k = snapshot_streak(data["snapshots"], today)
+    add("streak_6", "Nền móng", k >= STREAK_TARGET, k / STREAK_TARGET,
+        f"Đã {k} tháng liên tiếp – còn {STREAK_TARGET - k} tháng")
+    return out
+
+
+def next_milestone(ms: list[dict]) -> dict | None:
+    """Mốc chưa đạt gần nhất: ưu tiên thiết lập → hành trình FIRE → nền móng; trong nhóm lấy mốc đầu tiên."""
+    return next((m for m in ms if not m["reached"]), None)
+
+
+def new_milestones(ms: list[dict], seen: dict) -> list[dict]:
+    """Mốc đã đạt nhưng chưa ghi nhận. Thứ tự: mốc 'cao nhất' (đứng sau cùng trong danh sách) lên đầu."""
+    fresh = [m for m in ms if m["reached"] and m["key"] not in seen]
+    rank = {"Hành trình FIRE": 0, "Thiết lập": 1, "Nền móng": 2}
+    return sorted(fresh, key=lambda m: (rank[m["group"]], -ms.index(m)))

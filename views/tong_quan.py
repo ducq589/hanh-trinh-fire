@@ -10,6 +10,8 @@ latest = max((r["price_date"] for r in h["rows"] if r["price_date"]), default=No
 style.title("home", "Tổng quan gia sản", f"Bức tranh tài chính của bạn · giá cập nhật đến {ui.d(latest)} · "
             f"{len(data['transactions'])} giao dịch · {len(data['assets'])} tài sản")
 
+ui.celebrate(c, data, h, fp)
+
 if not data["assets"]:
     with st.container(border=True):
         st.subheader("Chào mừng! Thiết lập trong 5 bước")
@@ -100,6 +102,10 @@ with st.expander(f"Việc cần chú ý ({len(rem)})", expanded=bool(urgent), ke
         items = [t for lv, t in rem if lv == level]
         if items:
             getattr(st, level)(f"**{head}**\n" + "\n".join(f"- {t}" for t in items))
+
+# --------------------------------------------------------------- achievements
+with st.expander("Thành tựu của bạn", key=style.ic("trophy", "thanhtuu")):
+    ui.achievements(data, h, fp)
 
 # --------------------------------------------------------------- financial health (tóm tắt)
 good, known = ui.health_summary(data, h, fp)

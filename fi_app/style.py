@@ -117,6 +117,24 @@ button[data-testid="stBaseButton-primaryFormSubmit"] {{ color: #111 !important; 
 .hc .ref {{ color:{MUTED}; font-size:.78rem; }}
 .hc .hint {{ color:#DADADA; font-size:.84rem; margin-top:8px; line-height:1.45; }}
 .hc .hint b {{ color:{LIME}; font-weight:600; }}
+/* ---- thành tựu ---- */
+.cele {{ display:flex; gap:16px; align-items:center; background:linear-gradient(120deg,rgba(182,243,106,.18),rgba(182,243,106,.04));
+        border:1px solid {LIME}; border-radius:20px; padding:16px 20px; }}
+.cele .ico {{ flex:none; width:52px; height:52px; border-radius:16px; background:{LIME}; display:flex;
+             align-items:center; justify-content:center; }}
+.cele .k {{ color:{LIME}; font-size:.78rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }}
+.cele .t {{ color:{TEXT}; font-size:1.25rem; font-weight:700; margin:2px 0; }}
+.cele .m {{ color:#DDF5BF; font-size:.95rem; line-height:1.5; }}
+.cele .also {{ color:{MUTED}; font-size:.82rem; margin-top:6px; }}
+.badges {{ display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 6px; }}
+.badge {{ display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 12px; font-size:.8rem;
+         border:1px solid #333; background:#1C1C1C; color:#6E6E6E; }}
+.badge.on {{ background:rgba(182,243,106,.12); border-color:rgba(182,243,106,.45); color:{LIME}; font-weight:600; }}
+.badge .dt {{ color:{MUTED}; font-weight:400; font-size:.72rem; }}
+.bgroup {{ color:{MUTED}; font-size:.8rem; margin-top:8px; }}
+.hc.next {{ border-left-color:{LIME}; }} .hc.next .v {{ font-size:1.15rem; }}
+.hc .bar {{ height:8px; background:#333; border-radius:99px; margin:8px 0 6px; overflow:hidden; }}
+.hc .bar > div {{ height:100%; background:{LIME}; border-radius:99px; }}
 .tip {{ background:rgba(182,243,106,.08); border:1px solid rgba(182,243,106,.25); color:#DDF5BF;
        border-radius:14px; padding:10px 14px; font-size:.88rem; margin:8px 0; }}
 .cal {{ display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; }}
@@ -276,6 +294,32 @@ def health_grid(items: list[dict]) -> str:
                      f'<span class="tag">{HEALTH_TAG[x["status"]]}</span></div>'
                      f'<div class="v">{esc(x["display"])}</div>{ref}{hint}</div>')
     return f'<div class="hgrid">{"".join(cards)}</div>'
+
+
+def celebration(title: str, message: str, also: list[str] | None = None) -> str:
+    extra = f'<div class="also">Bạn cũng vừa đạt: {esc(" · ".join(also))}</div>' if also else ""
+    return (f'<div class="cele"><div class="ico">{svg("trophy", 28, "#111")}</div><div>'
+            f'<div class="k">Chúc mừng – mốc mới!</div><div class="t">{esc(title)}</div>'
+            f'<div class="m">{esc(message)}</div>{extra}</div></div>')
+
+
+def badges(groups: list[tuple[str, list[tuple[str, bool, str]]]]) -> str:
+    """groups: (tên nhóm, [(nhãn, đã đạt, ngày đạt)])."""
+    out = []
+    for g, items in groups:
+        b = "".join(f'<span class="badge{" on" if on else ""}">{"✓ " if on else ""}{esc(lb)}'
+                    f'{f" <span class=dt>{esc(d)}</span>" if on and d else ""}</span>' for lb, on, d in items)
+        out.append(f'<div class="bgroup">{esc(g)}</div><div class="badges">{b}</div>')
+    return "".join(out)
+
+
+def next_cards(items: list[dict]) -> str:
+    """Thẻ 'mốc kế tiếp': nhóm, tên mốc, thanh tiến độ, còn thiếu."""
+    cards = "".join(
+        f'<div class="hc next"><div class="top"><div class="lb">{esc(m["group"])}</div></div>'
+        f'<div class="v">{esc(m["title"])}</div><div class="bar"><div style="width:{m["progress"] * 100:.0f}%"></div>'
+        f'</div><div class="ref">{esc(m["gap"])}</div></div>' for m in items)
+    return f'<div class="hgrid">{cards}</div>'
 
 
 def tip(text: str) -> str:

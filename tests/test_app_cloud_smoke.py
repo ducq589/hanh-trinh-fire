@@ -117,6 +117,31 @@ def test_onboarding_can_be_hidden_and_health_shown(seeded):
         os.chdir(cwd)
 
 
+def test_celebration_ack_and_intro_tabs(seeded):
+    import json
+    from fi_app import db
+    f, dbfile = seeded
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        at = _run(f)
+        assert not at.exception, at.exception[0].value
+        html = " ".join(str(h.proto.body) for h in at.get("html"))
+        assert "Chúc mừng – mốc mới!" in html and "Tài sản đầu tiên" in html
+        assert any(x.label == "Thành tựu của bạn" for x in at.expander)
+        at.button(key="ic-trophy-ms_ack").click().run()
+        assert not at.exception, at.exception[0].value
+        assert "Chúc mừng – mốc mới!" not in " ".join(str(h.proto.body) for h in at.get("html"))
+        seen = json.loads(db.kv(db.connect_local(dbfile), "settings")["milestones_seen"])
+        assert "setup_asset" in seen and "fire_1" not in seen
+        at.switch_page("views/gioi_thieu.py").run()
+        assert not at.exception, at.exception[0].value
+        assert [t.label for t in at.tabs] == ["Về app", "Tính năng", "Câu chuyện", "Hành trình", "Ví dụ tính", "Hỏi đáp"]
+        assert "Giá tự cập nhật mỗi ngày" in " ".join(str(h.proto.body) for h in at.get("html"))
+    finally:
+        os.chdir(cwd)
+
+
 @pytest.mark.parametrize("google", [True, False])
 def test_login_screen_shows_intro_and_promise(tmp_path, google):
     """Chưa đăng nhập: màn hình đăng nhập có phần giới thiệu ngắn và cam kết không khuyến nghị đầu tư."""

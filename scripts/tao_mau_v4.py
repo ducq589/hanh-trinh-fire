@@ -108,6 +108,13 @@ def build() -> Path:
     for tname, sheet in TABLES.items():
         _shrink(wb[sheet], tname)
 
+    # tblGiaAuto từng là bảng Power Query: bỏ dấu queryTable (phần kết nối không còn → Excel báo lỗi nếu giữ)
+    ga = wb["Gia_Auto"].tables["tblGiaAuto"]
+    ga.tableType = None
+    for tc in ga.tableColumns:
+        tc.queryTableFieldId = None
+        tc.uniqueName = None
+
     # Thu chi: giữ danh sách khoản mục gợi ý, xoá số tiền / thành viên / ghi chú cá nhân
     p = wb["Profile"]
     t = p.tables["tblThuChi"]

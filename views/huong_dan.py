@@ -66,32 +66,24 @@ with t1:
 
 # =====================================================================
 with t2:
-    st.subheader("Bạn muốn khai báo trên Excel hay ngay trên app?")
-    st.caption("**Không có file Excel vẫn dùng đầy đủ** – làm theo Cách B ngay trên app. Quen Excel thì tải "
-               "**file mẫu v4** (Cách A), điền xong tải lên 1 lần.")
+    st.subheader("Chọn cách khai báo")
+    st.caption("**Cách A – khai ngay trên app** (khuyên dùng, không cần Excel). "
+               "**Cách B – điền file Excel mẫu v4** rồi tải lên app 1 lần – tiện khi bạn quen Excel hoặc có nhiều số liệu.")
     st.graphviz_chart(style.flow(
-        [("q", "Khai trên Excel?"), ("u", "Tải mẫu v4 → điền\\n→ tải lên app"), ("done", "Dữ liệu sẵn sàng"),
-         ("tc", "① Thu chi"), ("ts", "② Chọn tài sản\\n(giá tự cập nhật)"), ("gd", "③ Giao dịch"), ("gia", "④ Giá tay\\n(nếu cần)"),
-         ("tk", "⑤ Tiết kiệm · Nợ"), ("fire", "⑥ Kế hoạch FIRE")],
-        edges=[("q", "u", "Có"), ("u", "done", ""), ("q", "tc", "Không"), ("tc", "ts", ""), ("ts", "gd", ""),
-               ("gd", "gia", ""), ("gia", "tk", ""), ("tk", "fire", ""), ("fire", "done", "")],
+        [("q", "Khai trên Excel?"),
+         ("tc", "A① Thu chi"), ("ts", "A② Tài sản"), ("od", "A③ Tài sản đang có"), ("gia", "A④ Giá tay\\n(nếu cần)"),
+         ("tk", "A⑤ Tiết kiệm · Nợ"), ("fire", "A⑥ Kế hoạch FIRE"),
+         ("b1", "B① Tải mẫu v4"), ("b2", "B② Điền Excel"), ("b3", "B③ Tải lên app"),
+         ("done", "Dữ liệu sẵn sàng")],
+        edges=[("q", "tc", "Không"), ("tc", "ts", ""), ("ts", "od", ""), ("od", "gia", ""), ("gia", "tk", ""),
+               ("tk", "fire", ""), ("fire", "done", ""),
+               ("q", "b1", "Có"), ("b1", "b2", ""), ("b2", "b3", ""), ("b3", "done", "")],
         rankdir="TB", highlight=("done",)).replace('q [label="Khai trên Excel?"]',
                                                    'q [label="Khai trên Excel?", shape=diamond, fillcolor="#1C1C1C"]'),
         width="content")
 
-    with st.expander("Cách A – Điền trên Excel rồi nhập 1 lần", expanded=False, key=style.ic("file-import", "cach_a")):
-        st.html(style.steps([
-            ("Mở trang Sao lưu & Cài đặt", "Kéo xuống mục <b>Nhập dữ liệu từ Excel</b>."),
-            ("Chưa có file? Tải mẫu", "Bấm <b>Tải mẫu v4</b>, mở bằng Excel và điền theo sheet <b>HuongDan</b>: "
-                                     "Profile (thu chi), DM_TaiSan (tài sản), GiaoDich, SoTietKiem…"),
-            ("Chọn file", "Bấm <b>Upload</b> và chọn file đã điền (mẫu v4 hoặc Investment_tracking_v3)."),
-            ("Xác nhận", "Tick <b>Tôi hiểu và muốn nhập</b> rồi bấm <b>Nhập từ Excel</b>. "
-                         "Thao tác này thay toàn bộ dữ liệu hiện có của tài khoản bằng nội dung file."),
-            ("Kiểm tra", "Mở <b>Tổng quan</b>: số tài sản, giao dịch phải khớp file Excel."),
-        ]))
-        go_to("sao_luu", "Sao lưu & Cài đặt")
-
-    st.markdown("#### Cách B – Bắt đầu từ đầu (6 bước)")
+    # ------------------------------------------------------------- Cách A
+    st.markdown("#### Cách A – Khai ngay trên app (6 bước)")
     st.html(style.steps([
         ("Khai hồ sơ thu chi", "Trang <b>Thu chi</b>: điền số tiền <b>điển hình</b> của từng khoản thu/chi theo "
                                "đúng tần suất (Tháng/Quý/Năm) – app tự quy đổi ra mỗi tháng. Bấm <b>Lưu hồ sơ thu chi</b>. "
@@ -104,17 +96,19 @@ with t2:
                                 "<br>• <b>Cổ phiếu / ETF</b>: gõ mã (FPT, MBB, E1VFVN30…) → Kiểm tra & thêm."
                                 "<br>• <b>Vàng</b>: chọn loại (SJC, nhẫn trơn…) → Thêm vàng."
                                 "<br>App tự điền Tầng, lợi suất kỳ vọng và <b>tự lấy giá hằng ngày</b>. "
-                                "Tiết kiệm, bảo hiểm, BĐS: thêm dòng ở bảng bên dưới (tab <b>Khác</b>)."),
+                                "Tiết kiệm, bảo hiểm, BĐS: tab <b>Khác</b> (thêm dòng ở bảng bên dưới)."
+                                "<br><i>Quỹ/cổ phiếu cũng có thể thêm thẳng ở bước 3.</i>"),
     ], start=2))
     go_to("tai_san", "Tài sản")
     st.html(style.steps([
         ("Ghi tài sản đang có", "Trang <b>Giao dịch</b>:"
-                                "<br>• <b>Không muốn nhập lại lịch sử</b> (đã mua nhiều lần): tab <b>Tài sản đang có</b> → "
-                                "chưa có mã trong bảng thì gõ mã ở ô <b>Thêm</b> phía trên (VD: DCBF, FPT) → "
-                                "điền <b>Số lượng đang có</b> và <b>Giá vốn bình quân</b> (xem trong app Fmarket/app chứng khoán) "
-                                "→ <b>Lưu khai báo</b>. Lãi/lỗ tính ngay; XIRR tính từ ngày khai. Lưu xong mã rời khỏi bảng này "
-                                "(chỉ dùng cho lần khai đầu); muốn sửa thì vào tab <b>Lịch sử & sửa</b>."
-                                "<br>• <b>Muốn đủ lịch sử</b>: tab <b>Giao dịch khác</b>, nhập từng lần mua – XIRR chính xác từ đầu."),
+                                "<br>• <b>Không muốn nhập lại lịch sử</b> (đã mua nhiều lần) → tab <b>Tài sản đang có</b>:"
+                                "<br>&nbsp;&nbsp;– Bảng chỉ hiện tài sản <b>chưa có dữ liệu</b>; chưa có mã thì gõ ở ô <b>Thêm</b> (VD: DCBF, FPT)."
+                                "<br>&nbsp;&nbsp;– Điền <b>Số lượng đang có</b> và <b>Giá vốn BQ</b> (hoặc Tổng vốn) – xem trong app Fmarket / "
+                                "app chứng khoán → <b>Lưu khai báo</b>. Lãi/lỗ tính ngay; XIRR tính từ ngày khai."
+                                "<br>&nbsp;&nbsp;– Lưu xong mã rời khỏi bảng (chỉ dùng cho lần khai đầu). Muốn sửa: tab "
+                                "<b>Lịch sử & sửa</b> (dòng Vốn đầu kỳ). Thêm nhầm mã: mục <b>Bỏ mã thêm nhầm</b>."
+                                "<br>• <b>Muốn đủ lịch sử</b> → tab <b>Giao dịch khác</b>, nhập từng lần mua – XIRR chính xác từ đầu."),
     ], start=3))
     st.graphviz_chart(style.flow(
         [("q", "Có muốn nhập\\nlịch sử lệnh?"), ("a", "Tab Giao dịch khác\\nnhập từng lần mua"),
@@ -140,6 +134,32 @@ with t2:
                               "lạm phát, tỷ lệ rút an toàn (SWR). Bấm <b>Lưu giả định</b>."),
     ], start=6))
     go_to("ke_hoach_fire", "Kế hoạch FIRE")
+
+    # ------------------------------------------------------------- Cách B
+    st.markdown("#### Cách B – Khai bằng file Excel mẫu v4")
+    with st.container(border=True):
+        st.graphviz_chart(style.flow(
+            [("t", "Tải mẫu v4"), ("d", "Điền theo\\nsheet HuongDan"), ("u", "Tải lên app"), ("k", "Kiểm tra\\n& dùng tiếp")],
+            highlight=("k",)), width="content")
+        st.html(style.steps([
+            ("Tải file mẫu", "Trang <b>Sao lưu & Cài đặt</b> → mục <b>Nhập dữ liệu từ Excel</b> → bấm <b>Tải mẫu v4</b>."),
+            ("Điền theo sheet HuongDan", "Mở file bằng Excel:"
+                                         "<br>• <b>Profile</b>: thu chi điển hình (Tháng/Quý/Năm)."
+                                         "<br>• <b>DM_TaiSan</b>: mỗi tài sản 1 dòng – ghi <b>Mã đúng mã quỹ/cổ phiếu</b> "
+                                         "(DCDS, FPT…) để app tự lấy giá; cột <b>Tính FIRE?</b>."
+                                         "<br>• <b>GiaoDich</b>: đã có tài sản mà không muốn nhập lịch sử → mỗi tài sản "
+                                         "<b>1 dòng Vốn đầu kỳ</b> (Ngày = hôm nay, Số lượng = số đang có, Giá = giá vốn BQ); "
+                                         "hoặc nhập từng lệnh mua/bán."
+                                         "<br>• <b>SoTietKiem</b>, <b>MucTieu</b>, <b>No</b>: sổ tiết kiệm, mục tiêu, khoản vay."
+                                         "<br>• <b>FIRE_Plan</b> ô B4:B10: tuổi, tuổi muốn đạt FIRE, lạm phát, SWR…"),
+            ("Tải lên app", "Quay lại <b>Sao lưu & Cài đặt</b> → <b>Upload</b> file đã điền → tick <b>Tôi hiểu và muốn nhập</b> "
+                            "→ <b>Nhập từ Excel</b>. ⚠ Thao tác này <b>thay toàn bộ dữ liệu</b> của tài khoản – chỉ dùng khi mới bắt đầu."),
+            ("Kiểm tra & dùng tiếp", "Mở <b>Tổng quan</b> đối chiếu số liệu. Giá quỹ/cổ phiếu tự lấy (hoặc bấm <b>Lấy giá mới nhất</b> "
+                                     "ở trang Giá). Vàng: chọn nguồn giá PNJ ở trang Tài sản (cột Nguồn giá, VD <code>pnj:N24K:mua</code>) "
+                                     "hoặc nhập giá tay. Từ đó trở đi ghi giao dịch mới ngay trên app."),
+        ]))
+        st.caption("File Investment_tracking_v3 cũ cũng nhập được theo cách này.")
+        go_to("sao_luu", "Sao lưu & Cài đặt")
 
     st.markdown("#### Tháp tài sản – chọn Tầng cho từng tài sản")
     st.html(style.legend([

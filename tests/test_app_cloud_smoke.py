@@ -150,6 +150,23 @@ def test_celebration_ack_and_intro_tabs(seeded):
         os.chdir(cwd)
 
 
+def test_field_guides_on_data_pages(entry):
+    """Mỗi bảng nhập liệu có khung 'Cách điền bảng này' (Giao dịch còn có khung theo loại giao dịch)."""
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        at = _run(entry)
+        want = {"thu_chi": 1, "tiet_kiem": 3, "tai_san": 1, "giao_dich": 2}   # bảng khai lần đầu ẩn: DCDS đã có số dư
+        for page, n in want.items():
+            at.switch_page(f"views/{page}.py").run()
+            assert not at.exception, f"{page}: {at.exception[0].value}"
+            got = sum(" – " in x.label and (x.label.startswith("Cách điền") or x.label.startswith("Điền cột"))
+                      for x in at.expander)
+            assert got == n, (page, got)
+    finally:
+        os.chdir(cwd)
+
+
 @pytest.mark.parametrize("google", [True, False])
 def test_login_screen_shows_intro_and_promise(tmp_path, google):
     """Chưa đăng nhập: màn hình đăng nhập có phần giới thiệu ngắn và cam kết không khuyến nghị đầu tư."""

@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from fi_app import catalog, db, style, ui
+from fi_app import catalog, db, field_guide, style, ui
 
 c, data, h, fp = ui.state()
 style.title("briefcase", "Danh mục tài sản", "Chọn tài sản bạn đầu tư – quỹ, cổ phiếu, vàng được tự cập nhật giá mỗi ngày.")
@@ -85,23 +85,21 @@ df = pd.DataFrame(data["assets"], columns=["code", "name", "type", "tier", "fire
 df["fire_include"] = df["fire_include"].astype(bool)
 df["exp_return"] = df["exp_return"] * 100
 df["target_weight"] = df["target_weight"] * 100
+field_guide.render("assets")
 st.data_editor(df, key="assets_ed", hide_index=True, width="stretch", num_rows="dynamic", column_config={
-    "code": st.column_config.TextColumn("Mã", required=True, max_chars=12),
-    "name": st.column_config.TextColumn("Tên", required=True),
-    "type": st.column_config.SelectboxColumn("Loại", options=db.ASSET_TYPES),
-    "tier": st.column_config.SelectboxColumn("Tầng", options=db.TIERS, required=True),
-    "fire_include": st.column_config.CheckboxColumn("Tính FIRE?", help="Tài sản dùng để tạo thu nhập thụ động"),
-    "exp_return": st.column_config.NumberColumn("Lợi suất KV (%/năm)", format="%.1f",
-                                                help="Giả định dài hạn để dự phóng FIRE – không phải cam kết"),
-    "target_weight": st.column_config.NumberColumn("Tỷ lệ mục tiêu (%)", format="%.0f",
-                                                   help="Chỉ điền cho nhóm tài sản muốn tái cân bằng"),
-    "valuation": st.column_config.SelectboxColumn("Cách định giá", options=db.VALUATIONS, required=True),
+    "code": st.column_config.TextColumn("Mã", required=True, max_chars=12, help=field_guide.tip("assets", "Mã")),
+    "name": st.column_config.TextColumn("Tên", required=True, help=field_guide.tip("assets", "Tên")),
+    "type": st.column_config.SelectboxColumn("Loại", options=db.ASSET_TYPES, help=field_guide.tip("assets", "Loại")),
+    "tier": st.column_config.SelectboxColumn("Tầng", options=db.TIERS, required=True, help=field_guide.tip("assets", "Tầng")),
+    "fire_include": st.column_config.CheckboxColumn("Tính FIRE?", help=field_guide.tip("assets", "Tính FIRE?")),
+    "exp_return": st.column_config.NumberColumn("Lợi suất KV (%/năm)", format="%.1f", help=field_guide.tip("assets", "Lợi suất KV (%/năm)")),
+    "target_weight": st.column_config.NumberColumn("Tỷ lệ mục tiêu (%)", format="%.0f", help=field_guide.tip("assets", "Tỷ lệ mục tiêu (%)")),
+    "valuation": st.column_config.SelectboxColumn("Cách định giá", options=db.VALUATIONS, required=True, help=field_guide.tip("assets", "Cách định giá")),
     "price_source": st.column_config.TextColumn(
-        "Nguồn giá", help="Để trống = nhập tay. fmarket (quỹ mở) · vndirect (cổ phiếu/ETF) · "
-                          "pnj:SJC:mua hoặc pnj:N24K:mua (vàng, giá mua vào/chỉ). Có thể ghi mã khác, VD vndirect:FPT"),
-    "unit": st.column_config.TextColumn("Đơn vị"),
-    "note": st.column_config.TextColumn("Ghi chú"),
-    "sort_order": st.column_config.NumberColumn("Thứ tự", format="%d"),
+        "Nguồn giá", help=field_guide.tip("assets", "Nguồn giá")),
+    "unit": st.column_config.TextColumn("Đơn vị", help=field_guide.tip("assets", "Đơn vị")),
+    "note": st.column_config.TextColumn("Ghi chú", help=field_guide.tip("assets", "Ghi chú")),
+    "sort_order": st.column_config.NumberColumn("Thứ tự", format="%d", help=field_guide.tip("assets", "Thứ tự")),
 })
 
 

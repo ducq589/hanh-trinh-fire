@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from fi_app import catalog, db, engine, style, ui
+from fi_app import catalog, db, engine, field_guide, style, ui
 
 c, data, h, fp = ui.state()
 style.title("receipt", "Giao dịch")
@@ -60,16 +60,14 @@ with tab_open:
         st.info("Mọi tài sản trong danh mục đã có dữ liệu. Có tài sản mới mua từ trước? Gõ mã ở ô **Thêm** phía trên. "
                 "Sửa số dư đã khai ở tab *Lịch sử & sửa* (dòng Vốn đầu kỳ).")
     else:
+        field_guide.render("opening")
         edited = st.data_editor(op_df, key="open_ed", hide_index=True, width="stretch", disabled=["code", "name", "price"],
                                 column_config={
             "code": st.column_config.TextColumn("Mã"), "name": st.column_config.TextColumn("Tên"),
-            "qty": st.column_config.NumberColumn("Số lượng đang có", min_value=0.0, format="%.2f"),
-            "avg": st.column_config.NumberColumn("Giá vốn BQ (₫)", min_value=0.0, format="localized",
-                                                 help="Giá vốn bình quân mỗi CCQ/cổ phiếu"),
-            "total": st.column_config.NumberColumn("hoặc Tổng vốn (₫)", min_value=0.0, format="localized",
-                                                   help="Điền nếu không biết giá vốn BQ – app tự chia ra"),
-            "day": st.column_config.DateColumn("Ngày khai", format="DD/MM/YYYY",
-                                               help="Thường là hôm nay. XIRR sẽ tính từ ngày này."),
+            "qty": st.column_config.NumberColumn("Số lượng đang có", min_value=0.0, format="%.2f", help=field_guide.tip("opening", "Số lượng đang có")),
+            "avg": st.column_config.NumberColumn("Giá vốn BQ (₫)", min_value=0.0, format="localized", help=field_guide.tip("opening", "Giá vốn BQ (₫)")),
+            "total": st.column_config.NumberColumn("hoặc Tổng vốn (₫)", min_value=0.0, format="localized", help=field_guide.tip("opening", "hoặc Tổng vốn (₫)")),
+            "day": st.column_config.DateColumn("Ngày khai", format="DD/MM/YYYY", help=field_guide.tip("opening", "Ngày khai")),
             "price": st.column_config.NumberColumn("Giá hiện tại", format="localized"),
         })
         todo = []
@@ -130,6 +128,7 @@ with tab_dca:
 
 # --------------------------------------------------------------- other types
 with tab_other:
+    field_guide.render("transactions", "Điền cột nào theo loại giao dịch", ident="_form")
     with st.form("tx_full", clear_on_submit=True):
         c1, c2, c3 = st.columns(3)
         t_code = c1.selectbox("Tài sản", codes, format_func=names.get)
@@ -182,18 +181,19 @@ with tab_hist:
     } for t in reversed(txs)], columns=["id", "date", "code", "type", "amount", "price", "qty", "fee", "tax",
                                         "note", "SL tính", "Dòng tiền"])
     st.caption(f"{len(df)} giao dịch. Sửa trực tiếp trong bảng; chọn dòng rồi bấm biểu tượng thùng rác để xoá; bấm **Lưu thay đổi** để ghi.")
+    field_guide.render("transactions")
     st.data_editor(df, key="tx_editor", hide_index=True, width="stretch", num_rows="dynamic",
                    disabled=["id", "SL tính", "Dòng tiền"], column_config={
                        "id": None,
-                       "date": st.column_config.DateColumn("Ngày", format="DD/MM/YYYY", required=True),
-                       "code": st.column_config.SelectboxColumn("Mã", options=codes, required=True),
-                       "type": st.column_config.SelectboxColumn("Loại GD", options=db.TX_TYPES, required=True),
-                       "amount": st.column_config.NumberColumn("Số tiền", format="localized"),
-                       "price": st.column_config.NumberColumn("Giá", format="localized"),
-                       "qty": st.column_config.NumberColumn("Số lượng", format="%.2f"),
-                       "fee": st.column_config.NumberColumn("Phí", format="localized"),
-                       "tax": st.column_config.NumberColumn("Thuế", format="localized"),
-                       "note": st.column_config.TextColumn("Ghi chú"),
+                       "date": st.column_config.DateColumn("Ngày", format="DD/MM/YYYY", required=True, help=field_guide.tip("transactions", "Ngày")),
+                       "code": st.column_config.SelectboxColumn("Mã", options=codes, required=True, help=field_guide.tip("transactions", "Mã")),
+                       "type": st.column_config.SelectboxColumn("Loại GD", options=db.TX_TYPES, required=True, help=field_guide.tip("transactions", "Loại GD")),
+                       "amount": st.column_config.NumberColumn("Số tiền", format="localized", help=field_guide.tip("transactions", "Số tiền")),
+                       "price": st.column_config.NumberColumn("Giá", format="localized", help=field_guide.tip("transactions", "Giá")),
+                       "qty": st.column_config.NumberColumn("Số lượng", format="%.2f", help=field_guide.tip("transactions", "Số lượng")),
+                       "fee": st.column_config.NumberColumn("Phí", format="localized", help=field_guide.tip("transactions", "Phí")),
+                       "tax": st.column_config.NumberColumn("Thuế", format="localized", help=field_guide.tip("transactions", "Thuế")),
+                       "note": st.column_config.TextColumn("Ghi chú", help=field_guide.tip("transactions", "Ghi chú")),
                        "SL tính": st.column_config.NumberColumn(format="%.2f"),
                        "Dòng tiền": st.column_config.NumberColumn(format="localized"),
                    })

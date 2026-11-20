@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from fi_app import db, engine, lessons, style, ui
+from fi_app import db, engine, field_guide, lessons, style, ui
 
 c, data, h, fp = ui.state()
 style.title("building-bank", "Tiết kiệm, Mục tiêu & Nợ")
@@ -78,18 +78,19 @@ with tab_s:
             st_ = str(v)[2:]
             return f"background-color:{STATUS[st_][1]};color:{STATUS[st_][2]}" if st_ in STATUS else ""
         styled = df.style.map(_cell, subset=["Trạng thái"])
+        field_guide.render("savings")
         st.data_editor(styled, key="sav_ed", hide_index=True, width="stretch", num_rows="dynamic",
                        disabled=["id", "Nhận cuối kỳ", "Tăng trưởng", "Trạng thái"], column_config={
                            "id": None,
-                           "name": st.column_config.TextColumn("Gói", required=True),
-                           "code": st.column_config.SelectboxColumn("Nhóm (Mã TS)", options=sav_codes, required=True),
-                           "goal": st.column_config.SelectboxColumn("Mục tiêu", options=[""] + goal_names),
-                           "purpose": st.column_config.TextColumn("Mục đích"),
-                           "maturity": st.column_config.DateColumn("Ngày đáo hạn", format="DD/MM/YYYY"),
-                           "principal": st.column_config.NumberColumn("Gốc", format="localized"),
-                           "topup": st.column_config.NumberColumn("Nạp thêm", format="localized"),
-                           "start_balance": st.column_config.NumberColumn("Gửi đầu kỳ", format="localized"),
-                           "interest_gross": st.column_config.NumberColumn("Lãi trước thuế", format="localized"),
+                           "name": st.column_config.TextColumn("Gói", required=True, help=field_guide.tip("savings", "Gói")),
+                           "code": st.column_config.SelectboxColumn("Nhóm (Mã TS)", options=sav_codes, required=True, help=field_guide.tip("savings", "Nhóm (Mã TS)")),
+                           "goal": st.column_config.SelectboxColumn("Mục tiêu", options=[""] + goal_names, help=field_guide.tip("savings", "Mục tiêu")),
+                           "purpose": st.column_config.TextColumn("Mục đích", help=field_guide.tip("savings", "Mục đích")),
+                           "maturity": st.column_config.DateColumn("Ngày đáo hạn", format="DD/MM/YYYY", help=field_guide.tip("savings", "Ngày đáo hạn")),
+                           "principal": st.column_config.NumberColumn("Gốc", format="localized", help=field_guide.tip("savings", "Gốc")),
+                           "topup": st.column_config.NumberColumn("Nạp thêm", format="localized", help=field_guide.tip("savings", "Nạp thêm")),
+                           "start_balance": st.column_config.NumberColumn("Gửi đầu kỳ", format="localized", help=field_guide.tip("savings", "Gửi đầu kỳ")),
+                           "interest_gross": st.column_config.NumberColumn("Lãi trước thuế", format="localized", help=field_guide.tip("savings", "Lãi trước thuế")),
                            "Nhận cuối kỳ": st.column_config.NumberColumn(format="localized"),
                            "Tăng trưởng": st.column_config.NumberColumn(format="%.1f%%"),
                        })
@@ -114,13 +115,14 @@ with tab_g:
         "Trạng thái": gd[g["id"]]["status"],
     } for g in data["goals"]], columns=["id", "name", "target", "due_date", "Đã có", "Còn lại", "Số tháng còn",
                                         "Cần góp/tháng", "Trạng thái"])
+    field_guide.render("goals")
     st.data_editor(gdf, key="goal_ed", hide_index=True, width="stretch", num_rows="dynamic",
                    disabled=["id", "Đã có", "Còn lại", "Số tháng còn", "Cần góp/tháng", "Trạng thái"],
                    column_config={
                        "id": None,
-                       "name": st.column_config.TextColumn("Mục tiêu", required=True),
-                       "target": st.column_config.NumberColumn("Số tiền mục tiêu", format="localized"),
-                       "due_date": st.column_config.DateColumn("Ngày hoàn thành", format="DD/MM/YYYY"),
+                       "name": st.column_config.TextColumn("Mục tiêu", required=True, help=field_guide.tip("goals", "Mục tiêu")),
+                       "target": st.column_config.NumberColumn("Số tiền mục tiêu", format="localized", help=field_guide.tip("goals", "Số tiền mục tiêu")),
+                       "due_date": st.column_config.DateColumn("Ngày hoàn thành", format="DD/MM/YYYY", help=field_guide.tip("goals", "Ngày hoàn thành")),
                        **{k: st.column_config.NumberColumn(format="localized")
                           for k in ("Đã có", "Còn lại", "Cần góp/tháng")},
                    })
@@ -141,14 +143,15 @@ with tab_n:
     ndf = pd.DataFrame(data["liabilities"], columns=["id", "name", "balance", "rate", "monthly_payment", "end_date", "note"])
     ndf["end_date"] = ndf["end_date"].map(lambda x: engine.to_date(x) if x else None)
     ndf["rate"] = ndf["rate"] * 100
+    field_guide.render("debts")
     st.data_editor(ndf, key="debt_ed", hide_index=True, width="stretch", num_rows="dynamic", column_config={
         "id": None,
-        "name": st.column_config.TextColumn("Khoản nợ", required=True),
-        "balance": st.column_config.NumberColumn("Dư nợ", format="localized"),
-        "rate": st.column_config.NumberColumn("Lãi suất (%/năm)", format="%.2f"),
-        "monthly_payment": st.column_config.NumberColumn("Trả hằng tháng", format="localized"),
-        "end_date": st.column_config.DateColumn("Ngày tất toán", format="DD/MM/YYYY"),
-        "note": st.column_config.TextColumn("Ghi chú"),
+        "name": st.column_config.TextColumn("Khoản nợ", required=True, help=field_guide.tip("debts", "Khoản nợ")),
+        "balance": st.column_config.NumberColumn("Dư nợ", format="localized", help=field_guide.tip("debts", "Dư nợ")),
+        "rate": st.column_config.NumberColumn("Lãi suất (%/năm)", format="%.2f", help=field_guide.tip("debts", "Lãi suất (%/năm)")),
+        "monthly_payment": st.column_config.NumberColumn("Trả hằng tháng", format="localized", help=field_guide.tip("debts", "Trả hằng tháng")),
+        "end_date": st.column_config.DateColumn("Ngày tất toán", format="DD/MM/YYYY", help=field_guide.tip("debts", "Ngày tất toán")),
+        "note": st.column_config.TextColumn("Ghi chú", help=field_guide.tip("debts", "Ghi chú")),
     })
     st.metric("Tổng nợ", ui.vnd(fp["debt"]))
 

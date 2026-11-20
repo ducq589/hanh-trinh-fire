@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from fi_app import db, engine, lessons, style, ui
+from fi_app import db, engine, field_guide, lessons, style, ui
 
 c, data, h, fp = ui.state()
 style.title("cash", "Hồ sơ thu chi")
@@ -38,15 +38,16 @@ k[4].metric("Còn lại sau đầu tư", ui.tr(cf["after_invest"]),
 
 df = pd.DataFrame(data["cashflow"], columns=["id", "name", "grp", "member", "amount", "freq", "note", "sort_order"])
 df["Quy đổi/tháng"] = [engine.monthly(a, f or "Tháng") for a, f in zip(df["amount"], df["freq"])]
+field_guide.render("cashflow")
 st.data_editor(df, key="cf_ed", hide_index=True, width="stretch", num_rows="dynamic",
                disabled=["id", "Quy đổi/tháng"], column_config={
                    "id": None, "sort_order": None,
-                   "name": st.column_config.TextColumn("Khoản mục", required=True),
-                   "grp": st.column_config.SelectboxColumn("Nhóm", options=db.CF_GROUPS, required=True),
-                   "member": st.column_config.TextColumn("Thành viên"),
-                   "amount": st.column_config.NumberColumn("Số tiền", format="localized", min_value=0),
-                   "freq": st.column_config.SelectboxColumn("Tần suất", options=db.FREQS, required=True, default="Tháng"),
-                   "note": st.column_config.TextColumn("Ghi chú"),
+                   "name": st.column_config.TextColumn("Khoản mục", required=True, help=field_guide.tip("cashflow", "Khoản mục")),
+                   "grp": st.column_config.SelectboxColumn("Nhóm", options=db.CF_GROUPS, required=True, help=field_guide.tip("cashflow", "Nhóm")),
+                   "member": st.column_config.TextColumn("Thành viên", help=field_guide.tip("cashflow", "Thành viên")),
+                   "amount": st.column_config.NumberColumn("Số tiền", format="localized", min_value=0, help=field_guide.tip("cashflow", "Số tiền")),
+                   "freq": st.column_config.SelectboxColumn("Tần suất", options=db.FREQS, required=True, default="Tháng", help=field_guide.tip("cashflow", "Tần suất")),
+                   "note": st.column_config.TextColumn("Ghi chú", help=field_guide.tip("cashflow", "Ghi chú")),
                    "Quy đổi/tháng": st.column_config.NumberColumn(format="localized"),
                })
 if ui.has_changes("cf_ed") and st.button("Lưu hồ sơ thu chi", type="primary", key=style.ic("device-floppy", "luutc")):

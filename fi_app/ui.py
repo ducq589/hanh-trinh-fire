@@ -232,3 +232,23 @@ def add_asset(c, asset: dict, hint: str = "") -> bool:
           + ("Đã lấy giá tự động." if ok else "Chưa lấy được giá lúc này, app sẽ thử lại khi mở lần sau.") + hint)
     st.rerun()
     return True
+
+
+# ---------------------------------------------------------------- hướng dẫn từng bước & sức khoẻ tài chính
+def onboarding(data: dict, fp: dict, key: str = "ob") -> list[dict]:
+    """Vẽ danh sách 5 bước thiết lập + nút tới bước kế tiếp. Trả về danh sách bước (để trang tự quyết ẩn/hiện)."""
+    from . import style
+    steps = engine.onboarding(data, fp)
+    st.html(style.progress_steps(steps))
+    nxt = next((s for s in steps if not s["done"]), None)
+    if nxt:
+        with st.container(key=style.ic("arrow-right", f"{key}_next_{nxt['key']}")):
+            st.page_link(f"views/{nxt['page']}.py", label=f"Làm bước này: {nxt['title']} →", width="stretch")
+    return steps
+
+
+def health_summary(data: dict, h: dict, fp: dict) -> tuple[int, int]:
+    """(số chỉ số 'Tốt', số chỉ số đủ dữ liệu)."""
+    items = engine.health(data, h, fp)
+    known = [x for x in items if x["status"] != "na"]
+    return sum(x["status"] == "good" for x in known), len(known)

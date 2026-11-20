@@ -448,3 +448,105 @@ def reminders(data: dict, h: dict, fp: dict, today: dt.date | None = None) -> li
         if t.get("note") and "XÁC NHẬN" in str(t["note"]).upper():
             out.append(("info", f"Giao dịch {t['code']} ngày {to_date(t['date']):%d/%m/%Y}: {t['note']}"))
     return out
+
+
+# ================================================================ hướng dẫn thiết lập từng bước
+def onboarding(data: dict, fp: dict) -> list[dict]:
+    """5 bước thiết lập lần đầu; mỗi bước tự đánh dấu xong dựa trên dữ liệu thật."""
+    cf = fp["cf"]
+    steps = [
+        {"key": "thu_chi", "page": "thu_chi", "title": "Khai hồ sơ thu chi",
+         "desc": "Thu nhập và chi tiêu <b>điển hình</b> theo tháng/quý/năm – chỉ khai 1 lần, rà soát mỗi quý.",
+         "done": cf["income"] > 0 and cf["expense"] > 0},
+        {"key": "ca_nhan", "page": "ke_hoach_fire", "title": "Thông tin cá nhân & mục tiêu",
+         "desc": "Trang <b>Kế hoạch FIRE</b> → mở <b>Giả định</b>: tuổi hiện tại, tuổi muốn đạt FIRE.",
+         "done": bool(n(data["assumptions"].get("current_age")))},
+        {"key": "tai_san", "page": "tai_san", "title": "Chọn tài sản đầu tư",
+         "desc": "Chọn quỹ, cổ phiếu, vàng từ danh mục – giá tự cập nhật hằng ngày.",
+         "done": bool(data["assets"])},
+        {"key": "dang_co", "page": "giao_dich", "title": "Khai tài sản đang có",
+         "desc": "Đã mua từ trước? Chỉ cần <b>số lượng + giá vốn bình quân</b> (tab <b>Tài sản đang có</b>), "
+                 "hoặc nhập giao dịch / sổ tiết kiệm đầu tiên.",
+         "done": bool(data["transactions"] or data["savings"])},
+    ]
+    steps.append({"key": "ke_hoach", "page": "ke_hoach_fire", "title": "Xem kế hoạch FIRE",
+                  "desc": "Số FIRE, tiến độ, năm dự kiến đạt và <b>sức khoẻ tài chính</b> của bạn.",
+                  "done": bool(fp["fire_number"]) and all(s["done"] for s in steps)})
+    return steps
+
+
+# ================================================================ sức khoẻ tài chính
+# Mốc tham khảo phổ biến trong tài chính cá nhân – không phải khuyến nghị. (tốt, tạm) theo chiều của chỉ số.
+HEALTH_REF = {
+    "savings_rate": (0.20, 0.10),       # ≥ 20% tốt · ≥ 10% tạm
+    "essential_ratio": (0.50, 0.70),    # ≤ 50% tốt · ≤ 70% tạm
+    "debt_ratio": (0.20, 0.35),         # ≤ 20% tốt · ≤ 35% tạm
+    "invest_ratio": (0.15, 0.0),        # ≥ 15% tốt · > 0 tạm
+    "emergency_min": 3.0,               # ≥ 3 tháng: tạm (đủ = mục tiêu trong Giả định)
+}
+
+
+def _grade(x: float, good: float, ok: float, higher_better: bool = True) -> str:
+    if higher_better:
+        return "good" if x >= good else ("warn" if (x > ok if ok == 0 else x >= ok) else "bad")
+    return "good" if x <= good else ("warn" if x <= ok else "bad")
+
+
+def health(data: dict, h: dict, fp: dict) -> list[dict]:
+    """Các chỉ số 'nền móng' tài chính. status: good | warn | bad | na (thiếu dữ liệu)."""
+    R, cf = HEALTH_REF, fp["cf"]
+    inc = cf["income"]
+    out: list[dict] = []
+
+    def add(key, label, status, display, ref, hint="", page="thu_chi", value=None):
+        out.append({"key": key, "label": label, "status": status, "display": display, "value": value,
+                    "ref": ref, "hint": hint if status != "good" else "", "page": page})
+
+    no_cf = "Chưa khai thu nhập ở trang Thu chi"
+    # 1. Quỹ khẩn cấp
+    code = data["assumptions"].get("emergency_code") or "QKC"
+    tgt = fp["emergency_target"]
+    ref = f"Đủ ≥ {tgt:.0f} tháng chi thiết yếu (mục tiêu trong Giả định)"
+    if not any(r["code"] == code for r in h["rows"]):
+        add("emergency", "Quỹ khẩn cấp", "na", "–", ref,
+            f"Tạo một tài sản mã <b>{code}</b> (tiền gửi, quỹ trái phiếu…) dùng làm quỹ khẩn cấp ở trang Tài sản",
+            "tai_san")
+    elif fp["emergency_months"] is None:
+        add("emergency", "Quỹ khẩn cấp", "na", "–", ref, "Khai khoản <b>Chi thiết yếu</b> ở trang Thu chi")
+    else:
+        m = fp["emergency_months"]
+        st_ = "good" if m >= tgt else ("warn" if m >= R["emergency_min"] else "bad")
+        add("emergency", "Quỹ khẩn cấp", st_, f"{m:.1f} tháng".replace(".", ","), ref,
+            f"Còn thiếu {vnd(fp['emergency_gap'])} để đủ {tgt:.0f} tháng", "tai_san", m)
+
+    if not inc:
+        for key, label in (("savings_rate", "Tỷ lệ tiết kiệm"), ("essential_ratio", "Tỷ lệ chi thiết yếu"),
+                           ("debt_ratio", "Trả nợ / thu nhập"), ("invest_ratio", "Đầu tư định kỳ / thu nhập")):
+            add(key, label, "na", "–", "", no_cf)
+    else:
+        g, o = R["savings_rate"]
+        x = cf["savings_rate"]
+        add("savings_rate", "Tỷ lệ tiết kiệm", _grade(x, g, o), f"{x:.0%}",
+            f"≥ {g:.0%} tốt · {o:.0%}–{g:.0%} tạm", "Rà lại chi linh hoạt ở trang Thu chi", value=x)
+        g, o = R["essential_ratio"]
+        x = cf["essential_ratio"]
+        add("essential_ratio", "Tỷ lệ chi thiết yếu", _grade(x, g, o, False), f"{x:.0%}",
+            f"≤ {g:.0%} tốt · {g:.0%}–{o:.0%} tạm", "Chi thiết yếu chiếm phần lớn thu nhập – xem lại các khoản cố định",
+            value=x)
+        g, o = R["debt_ratio"]
+        pay = sum(n(l.get("monthly_payment")) for l in data["liabilities"])
+        x = pay / inc
+        add("debt_ratio", "Trả nợ / thu nhập", _grade(x, g, o, False),
+            f"{x:.0%}" if data["liabilities"] else "Không có nợ",
+            f"≤ {g:.0%} tốt · {g:.0%}–{o:.0%} tạm", "Ưu tiên trả bớt khoản nợ lãi cao (trang Tiết kiệm, Mục tiêu & Nợ)",
+            "tiet_kiem", x)
+        g, o = R["invest_ratio"]
+        x = cf["invest"] / inc
+        add("invest_ratio", "Đầu tư định kỳ / thu nhập", _grade(x, g, o), f"{x:.0%}",
+            f"≥ {g:.0%} tốt · > 0% tạm", "Khai khoản <b>Đầu tư định kỳ</b> ở trang Thu chi", value=x)
+
+    has_ins = any(a.get("type") == "Bảo hiểm" for a in data["assets"])
+    add("insurance", "Bảo vệ rủi ro (bảo hiểm)", "good" if has_ins else "warn", "Đã có" if has_ins else "Chưa khai",
+        "Có bảo hiểm sức khoẻ/nhân thọ phù hợp",
+        "Cân nhắc bảo hiểm sức khoẻ/nhân thọ; nếu đã có, khai ở trang Tài sản (loại Bảo hiểm)", "tai_san")
+    return out

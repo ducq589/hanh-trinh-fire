@@ -65,6 +65,12 @@ c3.metric("Quỹ khẩn cấp", f"{ui.num(fp['emergency_months'], 1)} / {fp['eme
           delta_color="inverse" if fp["emergency_gap"] else "normal", delta_arrow="off")
 
 
+# --------------------------------------------------------------- financial health
+st.subheader("Sức khoẻ tài chính – nền móng trước khi tăng tốc")
+st.html(style.health_grid(engine.health(data, h, fp)))
+st.html(style.tip("Mốc tham khảo phổ biến trong tài chính cá nhân, <b>không phải khuyến nghị</b>; hãy điều chỉnh theo "
+                  "hoàn cảnh của bạn. Ngưỡng quỹ khẩn cấp lấy từ <b>Giả định</b> ở đầu trang."))
+
 # --------------------------------------------------------------- what-if
 st.subheader("Nếu… thì sao?")
 w1, w2 = st.columns(2)

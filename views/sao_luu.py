@@ -22,8 +22,8 @@ else:
         p = db.backup(tag="thu_cong")
         ui.flash(f"Đã sao lưu: {p.name}")
         st.rerun()
-    with b2:
-        with open(db.DB_PATH, "rb") as fh:
+    if db.DB_PATH.exists():
+        with b2, open(db.DB_PATH, "rb") as fh:
             st.download_button("Tải file dữ liệu (.db)", fh.read(), file_name=f"fi_{dt.date.today():%Y%m%d}.db", key=style.ic("download", "taidb"))
     backups = db.list_backups()
     if backups:

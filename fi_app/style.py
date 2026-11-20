@@ -92,6 +92,31 @@ button[data-testid="stBaseButton-primaryFormSubmit"] {{ color: #111 !important; 
 .step .t {{ font-weight:600; color:{TEXT}; margin-bottom:2px; }}
 .step .d {{ color:#BDBDBD; font-size:.9rem; line-height:1.5; }}
 .step .d b {{ color:{LIME}; font-weight:600; }}
+/* ---- tiến độ thiết lập ---- */
+.step.done {{ opacity:.6; }} .step.done .n {{ background:#2F7A2A; color:{TEXT}; }}
+.step.next {{ border-color:{LIME}; box-shadow:0 0 0 1px {LIME} inset; }}
+.step.todo .n {{ background:#1C1C1C; color:{MUTED}; border:1px solid #3A3A3A; }}
+.obar {{ display:flex; align-items:center; gap:12px; margin:2px 0 12px; color:{MUTED}; font-size:.88rem; }}
+.obar .track {{ flex:1; height:8px; background:#333; border-radius:99px; overflow:hidden; }}
+.obar .track > div {{ height:100%; background:{LIME}; border-radius:99px; }}
+/* ---- sức khoẻ tài chính ---- */
+.hgrid {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }}
+@media (max-width: 900px) {{ .hgrid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} }}
+@media (max-width: 560px) {{ .hgrid {{ grid-template-columns:1fr; }} }}
+.hc {{ background:{CARD}; border:1px solid #2C2C2C; border-left:4px solid #555; border-radius:16px; padding:14px 16px; }}
+.hc.good {{ border-left-color:{LIME}; }} .hc.warn {{ border-left-color:{TARGET_LEAN}; }}
+.hc.bad {{ border-left-color:#FF7A6B; }} .hc.na {{ border-left-color:#555; }}
+.hc .top {{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:4px 8px; }}
+.hc .lb {{ color:{MUTED}; font-size:.88rem; }}
+.hc .tag {{ font-size:.72rem; border-radius:999px; padding:2px 10px; font-weight:600; white-space:nowrap; }}
+.hc.good .tag {{ background:rgba(182,243,106,.15); color:{LIME}; }}
+.hc.warn .tag {{ background:rgba(255,209,102,.15); color:{TARGET_LEAN}; }}
+.hc.bad .tag {{ background:rgba(255,122,107,.15); color:#FF7A6B; }}
+.hc.na .tag {{ background:#1C1C1C; color:{MUTED}; }}
+.hc .v {{ font-size:1.5rem; font-weight:700; color:{TEXT}; margin:6px 0 2px; }}
+.hc .ref {{ color:{MUTED}; font-size:.78rem; }}
+.hc .hint {{ color:#DADADA; font-size:.84rem; margin-top:8px; line-height:1.45; }}
+.hc .hint b {{ color:{LIME}; font-weight:600; }}
 .tip {{ background:rgba(182,243,106,.08); border:1px solid rgba(182,243,106,.25); color:#DDF5BF;
        border-radius:14px; padding:10px 14px; font-size:.88rem; margin:8px 0; }}
 .cal {{ display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; }}
@@ -221,6 +246,36 @@ def steps(items: list[tuple[str, str]], start: int = 1) -> str:
     out = "".join(f'<div class="step"><div class="n">{i}</div><div><div class="t">{esc(t)}</div>'
                   f'<div class="d">{d}</div></div></div>' for i, (t, d) in enumerate(items, start))
     return f'<div class="steps">{out}</div>'
+
+
+def progress_steps(items: list[dict]) -> str:
+    """Danh sách bước có trạng thái. items: dict có title, desc (cho phép <b>), done. Bước chưa xong đầu tiên nổi bật."""
+    nxt = next((i for i, x in enumerate(items) if not x["done"]), None)
+    done = sum(x["done"] for x in items)
+    bar = (f'<div class="obar"><span>Đã xong <b style="color:{LIME}">{done}/{len(items)}</b> bước</span>'
+           f'<div class="track"><div style="width:{done / len(items) * 100:.0f}%"></div></div></div>')
+    rows = []
+    for i, x in enumerate(items):
+        cls = "done" if x["done"] else ("next" if i == nxt else "todo")
+        mark = "✓" if x["done"] else str(i + 1)
+        rows.append(f'<div class="step {cls}"><div class="n">{mark}</div><div><div class="t">{esc(x["title"])}</div>'
+                    f'<div class="d">{x["desc"]}</div></div></div>')
+    return bar + f'<div class="steps">{"".join(rows)}</div>'
+
+
+HEALTH_TAG = {"good": "Tốt", "warn": "Cần chú ý", "bad": "Cần cải thiện", "na": "Chưa đủ dữ liệu"}
+
+
+def health_grid(items: list[dict]) -> str:
+    """Lưới thẻ sức khoẻ tài chính; viền trái + nhãn màu theo trạng thái."""
+    cards = []
+    for x in items:
+        hint = f'<div class="hint">{x["hint"]}</div>' if x.get("hint") else ""
+        ref = f'<div class="ref">Mốc tham khảo: {esc(x["ref"])}</div>' if x.get("ref") else ""
+        cards.append(f'<div class="hc {x["status"]}"><div class="top"><div class="lb">{esc(x["label"])}</div>'
+                     f'<span class="tag">{HEALTH_TAG[x["status"]]}</span></div>'
+                     f'<div class="v">{esc(x["display"])}</div>{ref}{hint}</div>')
+    return f'<div class="hgrid">{"".join(cards)}</div>'
 
 
 def tip(text: str) -> str:

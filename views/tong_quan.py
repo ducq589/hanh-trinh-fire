@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from fi_app import engine, style, ui
+from fi_app import db, engine, style, ui
 
 c, data, h, fp = ui.state()
 
@@ -12,21 +12,21 @@ style.title("home", "Tổng quan gia sản", f"Bức tranh tài chính của b�
 
 if not data["assets"]:
     with st.container(border=True):
-        st.subheader("Chào mừng! Bắt đầu trong 3 bước")
-        st.html(style.steps([
-            ("Khai thu chi", "Thu nhập, chi tiêu điển hình mỗi tháng/quý/năm – chỉ khai 1 lần."),
-            ("Chọn tài sản", "Chọn quỹ, cổ phiếu, vàng từ danh mục – giá tự cập nhật hằng ngày."),
-            ("Khai tài sản đang có", "Đã mua từ trước? Chỉ cần <b>số lượng + giá vốn bình quân</b> "
-                                     "(tab <b>Tài sản đang có</b>) – không phải nhập lại từng lệnh."),
-        ]))
-        b1, b2, b3, b4 = st.columns(4)
-        for col, (ic, page, label) in zip((b1, b2, b3, b4), (
-                ("receipt", "thu_chi", "1 · Thu chi"), ("briefcase", "tai_san", "2 · Tài sản"),
-                ("wallet", "giao_dich", "3 · Tài sản đang có"), ("book", "huong_dan", "Xem hướng dẫn"))):
-            with col.container(key=style.ic(ic, f"start_{page}")):
-                st.page_link(f"views/{page}.py", label=label, width="stretch")
+        st.subheader("Chào mừng! Thiết lập trong 5 bước")
+        st.caption("Mỗi bước tự đánh dấu ✓ khi bạn khai xong. Làm lần lượt – khoảng 15 phút.")
+        ui.onboarding(data, fp, key="ob_new")
+        with st.container(key=style.ic("book", "start_huong_dan")):
+            st.page_link("views/huong_dan.py", label="Xem hướng dẫn chi tiết", width="stretch")
         st.caption("Thích khai trên Excel? Tải **file mẫu v4** ở trang **Sao lưu & Cài đặt**, điền xong tải lên 1 lần.")
     st.stop()
+
+if not all(x["done"] for x in engine.onboarding(data, fp)) and data["settings"].get("onboarding_hidden") != "1":
+    with st.expander("Hoàn tất thiết lập", expanded=True, key=style.ic("list-details", "ob_box")):
+        ui.onboarding(data, fp, key="ob_rest")
+        if st.button("Ẩn hướng dẫn", key=style.ic("circle-x", "ob_hide")):
+            db.set_kv(c, "settings", {"onboarding_hidden": "1"})
+            ui.flash("Đã ẩn – xem lại tiến độ ở trang Hướng dẫn")
+            st.rerun()
 
 # --------------------------------------------------------------- KPI cards
 net = h["total_value"] - fp["debt"]
@@ -100,6 +100,14 @@ with st.expander(f"Việc cần chú ý ({len(rem)})", expanded=bool(urgent), ke
         items = [t for lv, t in rem if lv == level]
         if items:
             getattr(st, level)(f"**{head}**\n" + "\n".join(f"- {t}" for t in items))
+
+# --------------------------------------------------------------- financial health (tóm tắt)
+good, known = ui.health_summary(data, h, fp)
+hc1, hc2 = st.columns([3, 1], vertical_alignment="center")
+hc1.markdown(f"**Sức khoẻ tài chính:** {good}/{known} chỉ số ở mức tốt" if known
+             else "**Sức khoẻ tài chính:** chưa đủ dữ liệu – hãy khai Thu chi")
+with hc2.container(key=style.ic("circle-check", "lk_health")):
+    st.page_link("views/ke_hoach_fire.py", label="Xem chi tiết", width="stretch")
 
 # --------------------------------------------------------------- performance
 with st.container(border=True):

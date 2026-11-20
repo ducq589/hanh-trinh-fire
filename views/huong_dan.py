@@ -87,6 +87,9 @@ with t2:
         width="content")
 
     # ------------------------------------------------------------- Cách A
+    with st.container(border=True):
+        st.markdown("**Tiến độ thiết lập của bạn**")
+        ui.onboarding(data, fp, key="ob_hd")
     st.markdown("#### Cách A – Khai ngay trên app (6 bước)")
     st.html(style.steps([
         ("Khai hồ sơ thu chi", "Trang <b>Thu chi</b>: điền số tiền <b>điển hình</b> của từng khoản thu/chi theo "

@@ -66,8 +66,9 @@ JOURNEY = [  # (tiêu đề chặng, nội dung, [(trang, nhãn nút)])
     ("Xây dựng lớp đệm an toàn",
      "<b>Quỹ dự phòng khẩn cấp</b> bằng <b>3–6 tháng chi tiêu thiết yếu</b> để ứng phó biến cố mà không phải bán "
      "tháo tài sản hay vay nợ. <b>Bảo vệ rủi ro</b> bằng bảo hiểm phù hợp cho sức khoẻ, thu nhập và tài sản."
-     "<br><i>App:</i> theo dõi từng sổ tiết kiệm, mục tiêu cần tiền (học phí…), tầng Bảo vệ/Phòng thủ của tháp tài sản.",
-     [("tiet_kiem", "Tiết kiệm & Mục tiêu")]),
+     "<br><i>App:</i> bảng <b>Sức khoẻ tài chính</b> chấm quỹ khẩn cấp, tỷ lệ tiết kiệm, nợ, bảo hiểm; theo dõi từng "
+     "sổ tiết kiệm, mục tiêu cần tiền (học phí…), tầng Bảo vệ/Phòng thủ của tháp tài sản.",
+     [("ke_hoach_fire", "Sức khoẻ tài chính"), ("tiet_kiem", "Tiết kiệm & Mục tiêu")]),
     ("Gia tăng thu nhập & đầu tư sinh lời",
      "<b>Phát triển thu nhập chủ động</b>: nâng cao kỹ năng, mở rộng nguồn thu để tăng tốc tích luỹ. "
      "<b>Đầu tư có kỷ luật</b>: phân bổ theo mục tiêu, thời hạn và mức chịu rủi ro; tránh chạy theo tâm lý FOMO."

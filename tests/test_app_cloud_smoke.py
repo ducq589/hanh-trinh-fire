@@ -27,24 +27,46 @@ exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
 '''
 
 
-@pytest.fixture
-def entry(tmp_path):
-    from fi_app import catalog, db
+def _entry(tmp_path, seed: bool):
+    from fi_app import catalog, db, ui
     dbfile = tmp_path / "c.db"
     s = db.connect_local(dbfile)
-    catalog.add(s, catalog.build("fund", "DCDS", "Quỹ mở cổ phiếu DCDS"))
-    s.market_upsert([("fmarket:DCDS", "2026-11-19", 90000.0, "t")])
-    db.set_opening(s, "DCDS", 100, 80000, "2026-11-01")
+    if seed:
+        catalog.add(s, catalog.build("fund", "DCDS", "Quỹ mở cổ phiếu DCDS"))
+        s.market_upsert([("fmarket:DCDS", "2026-11-19", 90000.0, "t")])
+        db.set_opening(s, "DCDS", 100, 80000, "2026-11-01")
     db.set_kv(s, "meta", {"last_auto_fetch": "2099-01-01T00:00:00"})     # không gọi mạng lấy giá
+    s.close()
     f = ROOT / f"_test_entry_{os.getpid()}.py"                          # cùng thư mục app.py để tìm views/
     f.write_text(ENTRY % str(dbfile), encoding="utf-8")
-    from fi_app import ui
     saved = (db.connect_cloud, ui.cloud_config)          # script test thay 2 hàm này → khôi phục cho test khác
     try:
-        yield f
+        yield f, dbfile
     finally:
         db.connect_cloud, ui.cloud_config = saved
         f.unlink(missing_ok=True)
+
+
+@pytest.fixture
+def entry(tmp_path):
+    for f, _ in _entry(tmp_path, seed=True):
+        yield f
+
+
+@pytest.fixture
+def seeded(tmp_path):
+    yield from _entry(tmp_path, seed=True)
+
+
+@pytest.fixture
+def empty_entry(tmp_path):
+    for f, _ in _entry(tmp_path, seed=False):
+        yield f
+
+
+def _run(f):
+    from streamlit.testing.v1 import AppTest
+    return AppTest.from_file(str(f), default_timeout=90).run()
 
 
 def test_all_pages_render_when_logged_in(entry):
@@ -57,6 +79,40 @@ def test_all_pages_render_when_logged_in(entry):
         for p in PAGES:
             at.switch_page(f"views/{p}.py").run()
             assert not at.exception, f"{p}: {at.exception[0].value}"
+    finally:
+        os.chdir(cwd)
+
+
+def test_new_user_sees_5_step_onboarding(empty_entry):
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        at = _run(empty_entry)
+        assert not at.exception, at.exception[0].value
+        html = " ".join(str(h.proto.body) for h in at.get("html"))
+        assert "Đã xong" in html and "0/5" in html and "Khai hồ sơ thu chi" in html
+        assert "Thiết lập trong 5 bước" in " ".join(x.value for x in at.subheader)
+    finally:
+        os.chdir(cwd)
+
+
+def test_onboarding_can_be_hidden_and_health_shown(seeded):
+    from fi_app import db
+    f, dbfile = seeded
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        at = _run(f)
+        assert not at.exception, at.exception[0].value
+        assert any(x.label == "Hoàn tất thiết lập" for x in at.expander)       # chưa khai thu chi → chưa xong
+        at.button(key="ic-circle-x-ob_hide").click().run()
+        assert not at.exception, at.exception[0].value
+        assert not any(x.label == "Hoàn tất thiết lập" for x in at.expander)
+        assert db.kv(db.connect_local(dbfile), "settings").get("onboarding_hidden") == "1"
+        at.switch_page("views/ke_hoach_fire.py").run()
+        assert not at.exception, at.exception[0].value
+        assert any("Sức khoẻ tài chính" in x.value for x in at.subheader)
+        assert "Chưa đủ dữ liệu" in " ".join(str(h.proto.body) for h in at.get("html"))
     finally:
         os.chdir(cwd)
 

@@ -226,6 +226,32 @@ def test_delete_account_flow(tmp_path):
         f.unlink(missing_ok=True)
 
 
+def test_donate_box_when_configured(entry):
+    """Có [donate] trong secrets → tab Về app có khung ủng hộ + QR; Tổng quan có dòng mời. Không có → ẩn."""
+    from streamlit.testing.v1 import AppTest
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        at = AppTest.from_file(str(entry), default_timeout=90)
+        at.secrets["donate"] = {"bank_bin": "970436", "account_no": "0123456789", "account_name": "NGUYEN VAN A",
+                                "bank_name": "Vietcombank"}
+        at.run()
+        assert not at.exception, at.exception[0].value
+        assert any("ủng hộ tác giả" in x.value for x in at.caption)
+        at.switch_page("views/gioi_thieu.py").run()
+        assert not at.exception, at.exception[0].value
+        assert any("Ủng hộ tác giả" in x.value for x in at.markdown)
+        assert len(at.image) >= 1                                              # ảnh QR
+        at.radio(key="donate_amt").set_value("Tự nhập").run()               # đổi mức → QR tĩnh, vẫn không lỗi
+        assert not at.exception, at.exception[0].value
+
+        plain = AppTest.from_file(str(entry), default_timeout=90).run()     # không cấu hình → không có khung
+        plain.switch_page("views/gioi_thieu.py").run()
+        assert not any("Ủng hộ tác giả" in x.value for x in plain.markdown)
+    finally:
+        os.chdir(cwd)
+
+
 @pytest.mark.parametrize("google", [True, False])
 def test_login_screen_shows_intro_and_promise(tmp_path, google):
     """Chưa đăng nhập: màn hình đăng nhập có phần giới thiệu ngắn và cam kết không khuyến nghị đầu tư."""

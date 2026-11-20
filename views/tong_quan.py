@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from fi_app import db, engine, style, ui
+from fi_app import db, donate, engine, style, ui
 
 c, data, h, fp = ui.state()
 
@@ -140,3 +140,11 @@ if soon:
                                     "Nhận cuối kỳ": ui.vnd(s["received"]), "Trạng thái": s["status"],
                                     "Mục đích": s.get("purpose")} for s in soon]),
                      hide_index=True, width="stretch")
+
+# --------------------------------------------------------------- lời mời ủng hộ (ẩn nếu chưa cấu hình)
+if donate.invite_line():
+    st.write("")
+    i1, i2 = st.columns([4, 1], vertical_alignment="center")
+    i1.caption(donate.invite_line())
+    with i2.container(key=style.ic("coin", "lk_donate")):
+        st.page_link("views/gioi_thieu.py", label="Ủng hộ", width="stretch")

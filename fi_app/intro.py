@@ -26,7 +26,7 @@ APP_DOES = [
     "Nhắc việc: giá cũ, sổ sắp đáo hạn, cần tái cân bằng, rà soát thu chi",
 ]
 APP_DOES_NOT = [
-    "Không giữ tiền, <b>không yêu cầu nạp tiền</b> dưới bất kỳ hình thức nào",
+    "Không giữ tiền đầu tư của bạn, <b>không yêu cầu nạp tiền</b> dưới bất kỳ hình thức nào",
     "Không mua/bán hộ, không kết nối tài khoản giao dịch của bạn",
     "<b>Không khuyến nghị</b> mã, sản phẩm hay thời điểm đầu tư",
     "Không phải dịch vụ tư vấn đầu tư",

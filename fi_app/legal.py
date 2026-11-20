@@ -108,6 +108,9 @@ Mọi quyết định đầu tư và giao dịch do **bạn tự thực hiện**
 - App được cung cấp **miễn phí, "như hiện có"**; có thể được thay đổi, tạm ngừng hoặc dừng mà không cần báo trước.
 - Hãy tự sao lưu định kỳ bằng **Sao lưu & Cài đặt → Tạo báo cáo Excel**. Trong phạm vi pháp luật cho phép, app không
   chịu trách nhiệm về thiệt hại phát sinh từ việc sử dụng số liệu trong app.
+- **Ủng hộ tự nguyện:** bạn có thể ủng hộ tác giả bằng chuyển khoản (mã VietQR ở trang Giới thiệu). Khoản ủng hộ hoàn toàn
+  tự nguyện, **không phải phí dịch vụ**, không đổi lấy quyền lợi hay tính năng nào và không được hoàn lại. Không ủng hộ
+  bạn vẫn dùng đầy đủ app. Giao dịch diễn ra trực tiếp giữa ngân hàng của bạn và tài khoản nhận; app không xử lý thanh toán.
 
 #### 6. Quyền riêng tư
 Cách app thu thập và bảo vệ dữ liệu được mô tả tại trang **Chính sách quyền riêng tư** (link cuối trang).

@@ -2,7 +2,7 @@
 import plotly.graph_objects as go
 import streamlit as st
 
-from fi_app import engine, intro, legal, style, ui
+from fi_app import donate, engine, intro, legal, style, ui
 
 intro.css()
 style.title("info-circle", "Giới thiệu Hành trình FIRE", intro.TAGLINE)
@@ -18,6 +18,8 @@ with t_app:
     intro.values()
     st.subheader("Cam kết của app")
     intro.promise_card()
+    st.write("")
+    donate.render()
 
 with t_feat:
     st.subheader("Tính năng nổi bật")

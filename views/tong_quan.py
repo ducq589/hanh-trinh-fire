@@ -24,7 +24,7 @@ if not data["assets"]:
                 ("plus", "giao_dich", "3 · Giao dịch"), ("book", "huong_dan", "Xem hướng dẫn"))):
             with col.container(key=style.ic(ic, f"start_{page}")):
                 st.page_link(f"views/{page}.py", label=label, width="stretch")
-        st.caption("Đã có file Excel Investment_tracking_v3? Nhập 1 lần ở trang **Sao lưu & Cài đặt**.")
+        st.caption("Thích khai trên Excel? Tải **file mẫu v4** ở trang **Sao lưu & Cài đặt**, điền xong tải lên 1 lần.")
     st.stop()
 
 # --------------------------------------------------------------- KPI cards

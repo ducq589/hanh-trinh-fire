@@ -1,4 +1,5 @@
 import datetime as dt
+from pathlib import Path
 
 import streamlit as st
 
@@ -72,19 +73,28 @@ with st.form("settings"):
         st.rerun()
 
 # --------------------------------------------------------------- import
-st.subheader("Nhập dữ liệu từ Excel v3")
+st.subheader("Nhập dữ liệu từ Excel")
+TEMPLATE = Path(__file__).resolve().parents[1] / "mau" / "Investment_tracking_v4.xlsx"
+with st.container(border=True):
+    m1, m2 = st.columns([5, 2], vertical_alignment="center")
+    m1.markdown("**Chưa có file? Tải file mẫu trống v4**")
+    m1.caption("Điền thu chi, tài sản, giao dịch, sổ tiết kiệm trên Excel (sheet *HuongDan* có hướng dẫn từng bước), "
+               "rồi tải lên ở ô bên dưới. Ghi Mã tài sản đúng mã quỹ/cổ phiếu để app tự lấy giá.")
+    if TEMPLATE.exists():
+        m2.download_button("Tải mẫu v4", TEMPLATE.read_bytes(), file_name=TEMPLATE.name, width="stretch",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                           key=style.ic("download", "taimau"))
 meta = db.kv(c, "meta")
 st.caption(f"Lần nhập gần nhất: {meta.get('imported_at', '–')} từ {meta.get('imported_from', '–')}. "
            "File Excel chỉ được ĐỌC, không bị sửa.")
 st.warning("Nhập sẽ **xoá toàn bộ dữ liệu hiện có của tài khoản này** (giao dịch, giá, thu chi…) và thay bằng nội dung "
-           "file Investment_tracking_v3.xlsx." + ("" if c.is_cloud else " Dữ liệu hiện tại được sao lưu trước."))
-src = None
-if c.is_cloud:
-    src = st.file_uploader("Chọn file Investment_tracking_v3.xlsx", type=["xlsx"])
-elif importer.V3_PATH.exists():
+           "file Excel." + ("" if c.is_cloud else " Dữ liệu hiện tại được sao lưu trước."))
+src = st.file_uploader("Chọn file Excel đã điền (mẫu v4 hoặc Investment_tracking_v3)", type=["xlsx"])
+if src is None and not c.is_cloud and importer.V3_PATH.exists():
     src = importer.V3_PATH
+    st.caption("Không chọn file → dùng Investment_tracking_v3.xlsx trong thư mục dự án.")
 ok = st.checkbox("Tôi hiểu và muốn nhập")
-if st.button("Nhập từ Excel v3", disabled=not ok or src is None, key=style.ic("file-import", "nhapv3")):
+if st.button("Nhập từ Excel", disabled=not ok or src is None, key=style.ic("file-import", "nhapv3")):
     if not c.is_cloud:
         db.backup(tag="truoc_nhap_lai")
     with st.spinner("Đang nhập…"):

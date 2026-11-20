@@ -67,16 +67,22 @@ def import_v3(store: db.Store, path=V3_PATH) -> dict:
         for t in ("assets", "transactions", "prices", "savings", "goals", "liabilities", "cashflow_items", "snapshots"):
             conn.x(f"DELETE FROM {t}")
 
-        for i, r in enumerate(_table(wb, "tblTaiSan")):
+        n = 0
+        for r in _table(wb, "tblTaiSan"):
+            if not r.get("Mã") or not str(r["Mã"]).strip():
+                continue
+            i = n
+            n += 1
             fire = _first_col(r, "Tính FIRE?", "Tính FI?")
             conn.x(
                 "INSERT INTO assets(code,name,type,tier,fire_include,exp_return,target_weight,valuation,unit,note,"
                 "sort_order,price_source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                (str(r["Mã"]).strip().upper(), r["Tên"], r["Loại"], r["Tầng"], 1 if fire == "Có" else 0,
+                (str(r["Mã"]).strip().upper(), r.get("Tên") or str(r["Mã"]).strip(), r.get("Loại") or "Khác",
+                 r.get("Tầng") or "Tăng trưởng", 1 if fire == "Có" else 0,
                  _num(r["Lợi suất KV"]), _num(r["Tỷ lệ mục tiêu"]), r["Cách định giá"] or "Thị trường",
                  r.get("Đơn vị"), r.get("Ghi chú"), i,
                  db.DEFAULT_PRICE_SOURCE.get(r["Loại"]) if (r["Cách định giá"] or "Thị trường") == "Thị trường" else None))
-        counts["assets"] = i + 1
+        counts["assets"] = n
 
         batch = [(_date(r["Ngày"]), str(r["Mã"]).strip().upper(), r["Loại GD"], _num(r["Số tiền"]), _num(r["Giá"]),
                   _num(r["Số lượng"]), _num(r["Phí"]), _num(r["Thuế"]), r.get("Ghi chú"))
@@ -98,6 +104,8 @@ def import_v3(store: db.Store, path=V3_PATH) -> dict:
 
         n = 0
         for r in _table(wb, "tblSTK"):
+            if not r.get("Gói") or not r.get("Mã TS"):
+                continue
             conn.x("INSERT INTO savings(name,code,goal,purpose,maturity,principal,topup,start_balance,interest_gross) "
                          "VALUES (?,?,?,?,?,?,?,?,?)",
                          (r["Gói"], r["Mã TS"], r.get("Mục tiêu"), r.get("Mục đích"), _date(r.get("Ngày đáo hạn")),

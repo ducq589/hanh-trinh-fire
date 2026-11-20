@@ -66,23 +66,26 @@ with t1:
 
 # =====================================================================
 with t2:
-    st.subheader("Bạn đã có file Excel “Investment_tracking_v3” chưa?")
-    st.caption("**Không có file Excel vẫn dùng đầy đủ** – làm theo Cách B. File Excel chỉ giúp chuyển dữ liệu cũ sang nhanh hơn.")
+    st.subheader("Bạn muốn khai báo trên Excel hay ngay trên app?")
+    st.caption("**Không có file Excel vẫn dùng đầy đủ** – làm theo Cách B ngay trên app. Quen Excel thì tải "
+               "**file mẫu v4** (Cách A), điền xong tải lên 1 lần.")
     st.graphviz_chart(style.flow(
-        [("q", "Có file Excel v3?"), ("u", "Sao lưu & Cài đặt\\n→ tải file lên"), ("done", "Dữ liệu sẵn sàng"),
+        [("q", "Khai trên Excel?"), ("u", "Tải mẫu v4 → điền\\n→ tải lên app"), ("done", "Dữ liệu sẵn sàng"),
          ("tc", "① Thu chi"), ("ts", "② Chọn tài sản\\n(giá tự cập nhật)"), ("gd", "③ Giao dịch"), ("gia", "④ Giá tay\\n(nếu cần)"),
          ("tk", "⑤ Tiết kiệm · Nợ"), ("fire", "⑥ Kế hoạch FIRE")],
-        edges=[("q", "u", "Có"), ("u", "done", ""), ("q", "tc", "Chưa"), ("tc", "ts", ""), ("ts", "gd", ""),
+        edges=[("q", "u", "Có"), ("u", "done", ""), ("q", "tc", "Không"), ("tc", "ts", ""), ("ts", "gd", ""),
                ("gd", "gia", ""), ("gia", "tk", ""), ("tk", "fire", ""), ("fire", "done", "")],
-        rankdir="TB", highlight=("done",)).replace('q [label="Có file Excel v3?"]',
-                                                   'q [label="Có file Excel v3?", shape=diamond, fillcolor="#1C1C1C"]'),
+        rankdir="TB", highlight=("done",)).replace('q [label="Khai trên Excel?"]',
+                                                   'q [label="Khai trên Excel?", shape=diamond, fillcolor="#1C1C1C"]'),
         width="content")
 
-    with st.expander("Cách A – Có file Excel: nhập 1 lần là xong", expanded=False, key=style.ic("file-import", "cach_a")):
+    with st.expander("Cách A – Điền trên Excel rồi nhập 1 lần", expanded=False, key=style.ic("file-import", "cach_a")):
         st.html(style.steps([
-            ("Mở trang Sao lưu & Cài đặt", "Kéo xuống mục <b>Nhập dữ liệu từ Excel v3</b>."),
-            ("Chọn file", "Bấm <b>Browse files</b> và chọn file <b>Investment_tracking_v3.xlsx</b>."),
-            ("Xác nhận", "Tick <b>Tôi hiểu và muốn nhập</b> rồi bấm <b>Nhập từ Excel v3</b>. "
+            ("Mở trang Sao lưu & Cài đặt", "Kéo xuống mục <b>Nhập dữ liệu từ Excel</b>."),
+            ("Chưa có file? Tải mẫu", "Bấm <b>Tải mẫu v4</b>, mở bằng Excel và điền theo sheet <b>HuongDan</b>: "
+                                     "Profile (thu chi), DM_TaiSan (tài sản), GiaoDich, SoTietKiem…"),
+            ("Chọn file", "Bấm <b>Upload</b> và chọn file đã điền (mẫu v4 hoặc Investment_tracking_v3)."),
+            ("Xác nhận", "Tick <b>Tôi hiểu và muốn nhập</b> rồi bấm <b>Nhập từ Excel</b>. "
                          "Thao tác này thay toàn bộ dữ liệu hiện có của tài khoản bằng nội dung file."),
             ("Kiểm tra", "Mở <b>Tổng quan</b>: số tài sản, giao dịch phải khớp file Excel."),
         ]))

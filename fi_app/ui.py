@@ -44,10 +44,15 @@ def store() -> db.Store:
         return s
     from . import auth
     a = st.session_state.get("auth")
-    if not a and auth.restore(cfg):           # ghi nhớ đăng nhập (cookie)
-        a = st.session_state.get("auth")
-    auth.flush_cookie()
+    token = auth.bridge()                     # ghi nhớ đăng nhập: token trong localStorage của trình duyệt
     if not a:
+        waiting = (token is None and not st.session_state.get("_bridge_skip")
+                   and not st.session_state.get("_logged_out") and not st.session_state.get("_restore_tried"))
+        if waiting:                           # lượt chạy đầu: trình duyệt chưa kịp báo token → chờ (tự chạy lại)
+            auth.waiting_screen()
+            st.stop()
+        if auth.restore(cfg, token) or "_cookie_op" in st.session_state:
+            st.rerun()                        # chạy lại để bridge lưu token mới / xoá token hỏng ngay
         auth.login_screen(cfg)
         st.stop()
     s = st.session_state.get("_store")

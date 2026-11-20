@@ -23,6 +23,7 @@ _CSS = f"""
 <style>
 /* ---- khung chung ---- */
 .block-container {{ padding-top: 4.6rem; max-width: 1280px; }}
+.st-key-fire_auth_bridge_box {{ display: none; }}
 h1, h2, h3 {{ letter-spacing: -0.01em; }}
 [data-testid="stCaptionContainer"], .stCaption {{ color: {MUTED} !important; }}
 

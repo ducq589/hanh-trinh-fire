@@ -167,6 +167,65 @@ def test_field_guides_on_data_pages(entry):
         os.chdir(cwd)
 
 
+DELETE_ENTRY = '''
+import pathlib, time, streamlit as st
+from fi_app import auth, db, ui
+ui.cloud_config = lambda: {"url": "https://x.supabase.co", "anon_key": "anon", "db_url": "postgres://unused"}
+class _CloudLike(db.Store):
+    is_cloud = property(lambda self: True)
+def _fake_cloud(dsn, user_id, email=None):
+    s = db.connect_local(pathlib.Path(%r))
+    s.__class__ = _CloudLike
+    s.user_id, s.email = user_id, email
+    return s
+db.connect_cloud = _fake_cloud
+db.delete_my_account = lambda s: db.__dict__.setdefault("_deleted", []).append(s.user_id)
+auth.revoke = lambda cfg, tok: None
+st.session_state["_bridge_skip"] = True
+if not st.session_state.get("_logged_out"):     # phiên giả lập: chỉ đăng nhập sẵn khi chưa đăng xuất
+    st.session_state.setdefault("auth", {"user_id": "u-1", "email": "toi@example.com", "access_token": "at",
+                                         "refresh_token": "rt", "at": time.time()})
+exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
+'''
+
+
+def test_delete_account_flow(tmp_path):
+    """Sao lưu (cloud): nút xoá khoá tới khi gõ đúng email + tick; xoá xong về màn đăng nhập có thông báo."""
+    from streamlit.testing.v1 import AppTest
+    from fi_app import auth, db, ui
+    dbfile = tmp_path / "c.db"
+    s0 = db.connect_local(dbfile)
+    db.set_kv(s0, "meta", {"last_auto_fetch": "2099-01-01T00:00:00"})
+    s0.close()
+    f = ROOT / f"_test_del_{os.getpid()}.py"
+    f.write_text(DELETE_ENTRY % str(dbfile), encoding="utf-8")
+    saved = (db.connect_cloud, ui.cloud_config, db.delete_my_account, auth.revoke)
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        at = AppTest.from_file(str(f), default_timeout=90).run()
+        assert not at.exception, at.exception[0].value
+        at.switch_page("views/sao_luu.py").run()
+        assert not at.exception, at.exception[0].value
+        btn = at.button(key="ic-trash-xoatk_btn")
+        assert btn.disabled
+        at.text_input(key="xoatk_email").input("sai@example.com").run()
+        at.checkbox(key="xoatk_ok").check().run()
+        assert at.button(key="ic-trash-xoatk_btn").disabled              # email sai → vẫn khoá
+        at.text_input(key="xoatk_email").input("TOI@example.com ").run()
+        assert not at.button(key="ic-trash-xoatk_btn").disabled          # không phân biệt hoa thường, bỏ khoảng trắng
+        at.button(key="ic-trash-xoatk_btn").click().run()
+        assert not at.exception, at.exception[0].value
+        assert db.__dict__.get("_deleted") == ["u-1"]
+        assert "auth" not in at.session_state
+        assert any("Đã xoá tài khoản" in x.value for x in at.success)
+    finally:
+        db.connect_cloud, ui.cloud_config, db.delete_my_account, auth.revoke = saved
+        db.__dict__.pop("_deleted", None)
+        os.chdir(cwd)
+        f.unlink(missing_ok=True)
+
+
 @pytest.mark.parametrize("google", [True, False])
 def test_login_screen_shows_intro_and_promise(tmp_path, google):
     """Chưa đăng nhập: màn hình đăng nhập có phần giới thiệu ngắn và cam kết không khuyến nghị đầu tư."""
@@ -202,7 +261,8 @@ exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
         f.unlink(missing_ok=True)
 
 
-@pytest.mark.parametrize("doc,title", [("privacy", "Chính sách quyền riêng tư"), ("terms", "Điều khoản sử dụng")])
+@pytest.mark.parametrize("doc,title", [("privacy", "Chính sách quyền riêng tư"), ("terms", "Điều khoản sử dụng"),
+                                       ("delete", "Xoá tài khoản")])
 @pytest.mark.parametrize("email", ["lienhe@example.com", ""])
 def test_public_legal_pages_without_login(doc, title, email):
     """?doc=privacy / ?doc=terms mở được khi CHƯA đăng nhập (Google OAuth yêu cầu), không hiện form đăng nhập."""

@@ -1,6 +1,6 @@
 """Chính sách quyền riêng tư & Điều khoản sử dụng – trang công khai (không cần đăng nhập).
 
-Địa chỉ:  <app>/?doc=privacy   và   <app>/?doc=terms
+Địa chỉ:  <app>/?doc=privacy · <app>/?doc=terms · <app>/?doc=delete (hướng dẫn xoá tài khoản – Google Play yêu cầu)
 Email liên hệ lấy từ secrets [supabase] contact_email (không ghi vào code).
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ import streamlit as st
 from . import intro, style
 
 UPDATED = "20/11/2026"
-DOCS = ("privacy", "terms")
+DOCS = ("privacy", "terms", "delete")
 
 
 def _cfg() -> dict:
@@ -69,7 +69,9 @@ app thu thập dữ liệu gì, dùng để làm gì và bạn có những quy�
 #### 4. Quyền của bạn
 - Xem, sửa, xoá dữ liệu của mình bất cứ lúc nào ngay trong app.
 - Tải toàn bộ dữ liệu ra file Excel tại **Sao lưu & Cài đặt → Tạo báo cáo Excel**.
-- Yêu cầu **xoá tài khoản và toàn bộ dữ liệu** bằng cách liên hệ {c}. Yêu cầu được xử lý trong vòng 30 ngày.
+- **Tự xoá tài khoản và toàn bộ dữ liệu ngay trong app**: **Sao lưu & Cài đặt → Xoá tài khoản**. Việc xoá diễn ra
+  ngay lập tức và không thể hoàn tác (xem trang **Xoá tài khoản**).
+- Không đăng nhập được? Gửi yêu cầu xoá tới {c} từ chính email của tài khoản; yêu cầu được xử lý trong vòng 30 ngày.
 
 #### 5. Thay đổi chính sách
 Khi chính sách thay đổi, nội dung mới được cập nhật tại trang này kèm ngày cập nhật.
@@ -115,12 +117,40 @@ Cách app thu thập và bảo vệ dữ liệu được mô tả tại trang **
 """
 
 
-TITLES = {"privacy": ("Chính sách quyền riêng tư", _privacy), "terms": ("Điều khoản sử dụng", _terms)}
+def _delete(c: str) -> str:
+    return f"""
+Bạn có thể **tự xoá tài khoản Hành trình FIRE và toàn bộ dữ liệu** bất cứ lúc nào, ngay trong app.
+
+#### Cách xoá trong app
+1. Đăng nhập vào app.
+2. Mở trang **Sao lưu & Cài đặt** (menu bên trái, mục *Hệ thống*).
+3. Kéo xuống mục **Xoá tài khoản** → mở khung **Xoá tài khoản và toàn bộ dữ liệu**.
+4. Gõ đúng email tài khoản, tick ô xác nhận, rồi bấm **Xoá vĩnh viễn tài khoản**.
+
+Muốn giữ lại số liệu? Trước khi xoá, bấm **Tạo báo cáo Excel** ở cùng trang để tải toàn bộ dữ liệu về máy.
+
+#### Dữ liệu bị xoá
+- Tài khoản đăng nhập (email, liên kết đăng nhập Google nếu có).
+- Toàn bộ dữ liệu bạn đã nhập: tài sản, giao dịch, giá nhập tay, hồ sơ thu chi, sổ tiết kiệm, mục tiêu, khoản nợ,
+  giả định kế hoạch, cài đặt, lịch sử snapshot và thành tựu.
+
+Dữ liệu bị xoá khỏi cơ sở dữ liệu của app **ngay lập tức và vĩnh viễn**, không thể khôi phục. File Excel bạn đã tải
+về máy (nếu có) vẫn thuộc về bạn. Giá thị trường dùng chung (NAV quỹ, giá cổ phiếu, vàng) không phải dữ liệu cá nhân nên không bị ảnh hưởng.
+
+#### Không đăng nhập được?
+Gửi yêu cầu xoá tới {c} **từ chính email của tài khoản** cần xoá. Yêu cầu được xử lý trong vòng 30 ngày và bạn sẽ
+nhận được email xác nhận khi hoàn tất.
+"""
+
+
+TITLES = {"privacy": ("Chính sách quyền riêng tư", _privacy), "terms": ("Điều khoản sử dụng", _terms),
+          "delete": ("Xoá tài khoản", _delete)}
 
 
 def links_html() -> str:
     return ('<div style="text-align:center;font-size:.82rem;color:#8A8A8A;margin-top:10px">'
-            f'{_a(url("privacy"), "Chính sách quyền riêng tư")} · {_a(url("terms"), "Điều khoản sử dụng")}</div>')
+            f'{_a(url("privacy"), "Chính sách quyền riêng tư")} · {_a(url("terms"), "Điều khoản sử dụng")} · '
+            f'{_a(url("delete"), "Xoá tài khoản")}</div>')
 
 
 def render(doc: str) -> None:
@@ -132,6 +162,5 @@ def render(doc: str) -> None:
     with mid:
         style.title("info-circle", title, f"Hành trình FIRE · cập nhật {UPDATED}")
         st.markdown(body(contact()))
-        other = "terms" if doc == "privacy" else "privacy"
-        st.html(f'<div style="margin-top:18px;font-size:.9rem">{_a(url(), "← Về trang chủ")}'
-                f' &nbsp;·&nbsp; {_a(url(other), TITLES[other][0])}</div>')
+        others = " &nbsp;·&nbsp; ".join(_a(url(d), TITLES[d][0]) for d in DOCS if d != doc)
+        st.html(f'<div style="margin-top:18px;font-size:.9rem">{_a(url(), "← Về trang chủ")} &nbsp;·&nbsp; {others}</div>')

@@ -160,3 +160,45 @@ def _open(path):
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     return db.Store("sqlite", conn)
+
+
+def test_delete_my_account_removes_only_own_data(dsn):
+    """public.delete_my_account(): xoá user đang đăng nhập + mọi dữ liệu (cascade); người khác còn nguyên; anon bị chặn."""
+    a_id, b_id = _user(dsn, "del-a@example.com"), _user(dsn, "del-b@example.com")
+    for uid in (a_id, b_id):
+        s = db.connect_cloud(dsn, uid)
+        s.x("INSERT INTO assets(code, name, tier, valuation) VALUES ('X','X','Tăng trưởng','Khai báo')")
+        db.add_transaction(s, "2026-11-19", "X", "Vốn đầu kỳ", price=1000, qty=5)
+        s.x("INSERT INTO cashflow_items(name, grp, amount, freq) VALUES ('Lương','Thu nhập chủ động',1,'Tháng')")
+        s.close()
+
+    a = db.connect_cloud(dsn, a_id)
+    db.delete_my_account(a)
+    a.close()
+    with psycopg.connect(dsn, autocommit=True) as c:                # kiểm tra bằng quyền hệ thống
+        assert c.execute("SELECT count(*) FROM auth.users WHERE id = %s", (a_id,)).fetchone()[0] == 0
+        for t in ("assets", "transactions", "cashflow_items", "settings", "assumptions"):
+            assert c.execute(f"SELECT count(*) FROM public.{t} WHERE user_id = %s", (a_id,)).fetchone()[0] == 0, t
+        assert c.execute("SELECT count(*) FROM public.transactions WHERE user_id = %s", (b_id,)).fetchone()[0] == 1
+        assert c.execute("SELECT count(*) FROM auth.users WHERE id = %s", (b_id,)).fetchone()[0] == 1
+        with pytest.raises(psycopg.Error):                           # anon không gọi được hàm
+            c.execute("SET ROLE anon")
+            c.execute("SELECT public.delete_my_account()")
+        c.execute("RESET ROLE")
+
+
+def test_delete_my_account_missing_function_message(dsn):
+    uid = _user(dsn, "del-c@example.com")
+    s = db.connect_cloud(dsn, uid)
+    s.conn.execute("RESET ROLE")
+    s.conn.execute("ALTER FUNCTION public.delete_my_account() RENAME TO delete_my_account_tmp")
+    s.conn.commit()
+    s._set_user_role()
+    try:
+        with pytest.raises(db.AccountDeleteError, match="xoa_tai_khoan.sql"):
+            db.delete_my_account(s)
+    finally:
+        s.conn.execute("RESET ROLE")
+        s.conn.execute("ALTER FUNCTION public.delete_my_account_tmp() RENAME TO delete_my_account")
+        s.conn.commit()
+        s.close()

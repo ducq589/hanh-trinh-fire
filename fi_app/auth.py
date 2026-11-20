@@ -306,6 +306,8 @@ def login_screen(cfg: dict) -> None:
         signup = bool(cfg.get("allow_signup", False))
         st.caption(("Nhập email để **đăng nhập hoặc tạo tài khoản mới**" if signup else "Đăng nhập bằng email")
                    + " – không cần mật khẩu. Mã 6 số sẽ được gửi vào hộp thư của bạn.")
+        if st.session_state.pop("_account_deleted", None):
+            st.success("Đã xoá tài khoản và toàn bộ dữ liệu. Cảm ơn bạn đã đồng hành cùng Hành trình FIRE.")
         g_err = st.session_state.pop("_google_error", None)
         if g_err:
             st.error(g_err)

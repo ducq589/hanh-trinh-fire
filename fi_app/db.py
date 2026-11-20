@@ -331,6 +331,25 @@ def set_opening(s: Store, code: str, qty: float | None, avg_price: float | None,
     return "updated" if n else "added"
 
 
+class AccountDeleteError(RuntimeError):
+    """Không xoá được tài khoản (VD quản trị viên chưa chạy supabase/xoa_tai_khoan.sql)."""
+
+
+def delete_my_account(s: Store) -> None:
+    """Cloud: xoá tài khoản đang đăng nhập + toàn bộ dữ liệu (hàm SQL public.delete_my_account, xoá dây chuyền)."""
+    if not s.is_cloud:
+        raise AccountDeleteError("Chỉ xoá tài khoản được ở chế độ cloud.")
+    try:
+        s.q("SELECT public.delete_my_account() AS ok")
+    except Exception as e:  # noqa: BLE001
+        with contextlib.suppress(Exception):
+            s.conn.rollback()
+        if "delete_my_account" in str(e) and ("does not exist" in str(e) or "không tồn tại" in str(e)):
+            raise AccountDeleteError("Tính năng xoá tài khoản chưa được bật trên máy chủ – quản trị viên cần chạy "
+                                     "supabase/xoa_tai_khoan.sql.") from e
+        raise AccountDeleteError(f"Không xoá được tài khoản: {e}") from e
+
+
 def upsert_price(s: Store, date, code, price, source="", is_manual=1) -> None:
     s.x("INSERT INTO prices(date, code, price, source, is_manual) VALUES (?,?,?,?,?) "
         "ON CONFLICT(date, code, is_manual) DO UPDATE SET price = excluded.price, source = excluded.source",

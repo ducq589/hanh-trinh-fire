@@ -102,3 +102,27 @@ if st.button("Nhập từ Excel", disabled=not ok or src is None, key=style.ic("
     st.session_state.pop("_startup_done", None)
     ui.flash("Đã nhập: " + ", ".join(f"{k} {v}" for k, v in counts.items()))
     st.rerun()
+
+
+# --------------------------------------------------------------- xoá tài khoản (chỉ cloud)
+if c.is_cloud:
+    st.subheader("Xoá tài khoản")
+    with st.expander("Xoá tài khoản và toàn bộ dữ liệu", key=style.ic("trash", "xoatk")):
+        st.error("**Không thể hoàn tác.** Toàn bộ dữ liệu của tài khoản (tài sản, giao dịch, thu chi, sổ tiết kiệm, "
+                 "mục tiêu, nợ, lịch sử) và chính tài khoản đăng nhập sẽ bị **xoá vĩnh viễn**.")
+        st.caption("Muốn giữ một bản? Bấm **Tạo báo cáo Excel** ở mục *Xuất dữ liệu* phía trên trước khi xoá.")
+        email = (c.email or "").strip().lower()
+        typed = st.text_input(f"Gõ email tài khoản ({email}) để xác nhận", key="xoatk_email")
+        sure = st.checkbox("Tôi hiểu toàn bộ dữ liệu sẽ bị xoá vĩnh viễn", key="xoatk_ok")
+        ready = bool(email) and typed.strip().lower() == email and sure
+        if st.button("Xoá vĩnh viễn tài khoản", type="primary", disabled=not ready, key=style.ic("trash", "xoatk_btn")):
+            from fi_app import auth
+            try:
+                db.delete_my_account(c)
+            except db.AccountDeleteError as e:
+                st.error(str(e))
+            else:
+                c.close()
+                auth.logout(ui.cloud_config())
+                st.session_state["_account_deleted"] = True
+                st.rerun()

@@ -113,3 +113,16 @@ create policy read_all on public.market_prices for select to authenticated using
 grant select on public.market_prices to authenticated;
 revoke insert, update, delete on public.market_prices from authenticated, anon;
 revoke all on public.market_prices from anon;
+
+-- ---------------------------------------------------------------- Xoá tài khoản (cũng có ở xoa_tai_khoan.sql)
+create or replace function public.delete_my_account() returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+  delete from auth.users where id = auth.uid();
+end $$;
+
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

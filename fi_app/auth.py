@@ -1,10 +1,12 @@
 """Đăng nhập bằng email + mã OTP 6 số (Supabase Auth). Chỉ dùng ở chế độ cloud."""
 from __future__ import annotations
 
-import json
+import base64
+import hashlib
 import re
+import secrets
 import time
-from urllib.parse import unquote
+from urllib.parse import unquote, urlencode, urlsplit
 
 import requests
 import streamlit as st
@@ -27,7 +29,7 @@ def _err(r: requests.Response) -> str:
         msg = r.text
     low = str(msg).lower()
     if "signups not allowed" in low or "user not found" in low:
-        return "Email này chưa được cấp quyền dùng app. Hãy liên hệ người quản trị."
+        return "Email này chưa có tài khoản và app đang tạm đóng đăng ký mới. Hãy liên hệ người quản trị."
     if "rate limit" in low or r.status_code == 429:
         return "Gửi mã quá nhiều lần – vui lòng đợi vài phút rồi thử lại."
     if "expired" in low or "invalid" in low:
@@ -79,49 +81,160 @@ def revoke(cfg: dict, access_token: str | None) -> None:
 # ---------------------------------------------------------------- ghi nhớ đăng nhập
 # Refresh token lưu ở localStorage của trình duyệt, chuyển qua lại bằng một component JS nhỏ (st.components.v2).
 # Không dùng cookie vì Streamlit Community Cloud không chuyển cookie của app tới server (st.context.cookies trống).
+PKCE_KEY = "fire_pkce"              # mã bí mật PKCE khi đăng nhập Google (dùng 1 lần)
 _BRIDGE_JS = """
 export default function(component) {
   const { data, setStateValue } = component;
-  const K = '%s';
-  let v = null;
-  try {
-    if (data && data.op === 'set' && data.value) localStorage.setItem(K, data.value);
-    if (data && data.op === 'clear') {
-      localStorage.removeItem(K);
-      document.cookie = K + '=;Path=/;Max-Age=0;SameSite=Strict';
-    }
-    v = localStorage.getItem(K);
-    if (!v) {                                   // chuyển từ cookie cũ (bản trước) sang localStorage
-      const m = document.cookie.match(new RegExp('(?:^|; )' + K + '=([^;]*)'));
-      if (m && m[1]) { v = decodeURIComponent(m[1]); localStorage.setItem(K, v); }
-    }
-  } catch (e) { v = null; }
-  if (!window.__fireRtReported) {               // báo cho Python 1 lần mỗi lần tải trang
+  const RT = '%s', PK = '%s';
+  const get = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const put = (k, op) => {
+    try {
+      if (!op) return;
+      if (op.op === 'set' && op.value) localStorage.setItem(k, op.value);
+      if (op.op === 'clear') {
+        localStorage.removeItem(k);
+        if (k === RT) document.cookie = RT + '=;Path=/;Max-Age=0;SameSite=Strict';
+      }
+    } catch (e) {}
+  };
+  // Báo cho Python 1 lần mỗi lần tải trang – giá trị TRƯỚC khi ghi lệnh mới (tab quay về từ Google giữ đúng mã)
+  if (!window.__fireRtReported) {
     window.__fireRtReported = true;
-    setStateValue('rt', v || '');
+    let rt = get(RT);
+    if (!rt) {                                   // chuyển từ cookie cũ (bản trước) sang localStorage
+      const m = document.cookie.match(new RegExp('(?:^|; )' + RT + '=([^;]*)'));
+      if (m && m[1]) { rt = decodeURIComponent(m[1]); try { localStorage.setItem(RT, rt); } catch (e) {} }
+    }
+    setStateValue('pkce', get(PK) || '');
+    setStateValue('rt', rt || '');
   }
+  put(RT, data && data.rt);
+  put(PK, data && data.pkce);
 }
-""" % COOKIE
+""" % (COOKIE, PKCE_KEY)
 _bridge_renderer = None
+
+
+def _op(value: str | None) -> tuple:
+    return ("set", value) if value else ("clear", None)
 
 
 def _queue_cookie(value: str | None) -> None:
     """Hẹn ghi (value) hoặc xoá (None) token ghi nhớ ở lượt vẽ trang tiếp theo."""
-    st.session_state["_cookie_op"] = ("set", value) if value else ("clear", None)
+    st.session_state["_cookie_op"] = _op(value)
+
+
+def _queue_pkce(value: str | None) -> None:
+    st.session_state["_pkce_op"] = _op(value)
+
+
+def _op_data(op) -> dict | None:
+    if not op:
+        return None
+    return {"op": "set", "value": op[1]} if op[0] == "set" else {"op": "clear"}
 
 
 def bridge() -> str | None:
     """Gắn component cầu nối (mỗi lượt chạy 1 lần): thực hiện lệnh ghi/xoá đang hẹn và trả về token trình duyệt
-    đang giữ – None nếu trình duyệt chưa báo (lượt chạy đầu tiên), '' nếu không có."""
+    đang giữ – None nếu trình duyệt chưa báo (lượt chạy đầu tiên), '' nếu không có.
+    Mã PKCE (đăng nhập Google) trình duyệt đang giữ được đặt vào st.session_state['_bridge_pkce']."""
     global _bridge_renderer
     if _bridge_renderer is None:
         _bridge_renderer = st.components.v2.component("fire_auth_bridge", js=_BRIDGE_JS)
-    op = st.session_state.pop("_cookie_op", None)
-    data = None if not op else ({"op": "set", "value": op[1]} if op[0] == "set" else {"op": "clear"})
+    rt_op, pk_op = st.session_state.pop("_cookie_op", None), st.session_state.pop("_pkce_op", None)
+    data = {"rt": _op_data(rt_op), "pkce": _op_data(pk_op)} if (rt_op or pk_op) else None
     with st.container(key="fire_auth_bridge_box"):
-        res = _bridge_renderer(key="fire_auth_bridge", data=data, on_rt_change=lambda: None)
+        res = _bridge_renderer(key="fire_auth_bridge", data=data, on_rt_change=lambda: None,
+                               on_pkce_change=lambda: None)
+    pk = getattr(res, "pkce", None)
+    if isinstance(pk, str):
+        st.session_state["_bridge_pkce"] = pk
     rt = getattr(res, "rt", None)
     return rt if isinstance(rt, str) else None
+
+
+# ---------------------------------------------------------------- đăng nhập Google (Supabase OAuth + PKCE)
+def pkce_pair() -> tuple[str, str]:
+    """(code_verifier, code_challenge S256) theo RFC 7636."""
+    verifier = secrets.token_urlsafe(64)[:96]
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+    return verifier, challenge
+
+
+def site_url(cfg: dict) -> str:
+    """Địa chỉ app để Supabase đưa người dùng quay về sau khi đăng nhập Google."""
+    if cfg.get("site_url"):
+        return str(cfg["site_url"]).rstrip("/")
+    try:
+        u = urlsplit(st.context.url)
+        return f"{u.scheme}://{u.netloc}"
+    except Exception:
+        return ""
+
+
+def google_url(cfg: dict, challenge: str) -> str:
+    q = urlencode({"provider": "google", "redirect_to": site_url(cfg), "code_challenge": challenge,
+                   "code_challenge_method": "s256"})
+    return f"{cfg['url'].rstrip('/')}/auth/v1/authorize?{q}"
+
+
+def prepare_google(cfg: dict) -> None:
+    """Trước khi gắn cầu nối: tạo mã PKCE cho phiên (1 lần) và hẹn lưu vào trình duyệt.
+    Không tạo khi đang quay về từ Google (?code=) để không ghi đè mã cũ."""
+    if not cfg.get("google") or st.session_state.get("auth") or st.session_state.get("_pkce_verifier"):
+        return
+    try:
+        if "code" in st.query_params or "error" in st.query_params:
+            return
+    except Exception:
+        return
+    verifier, challenge = pkce_pair()
+    st.session_state["_pkce_verifier"], st.session_state["_pkce_challenge"] = verifier, challenge
+    _queue_pkce(verifier)
+
+
+def exchange_code(cfg: dict, code: str, verifier: str) -> tuple[dict | None, str | None]:
+    """Đổi mã Google trả về lấy phiên Supabase."""
+    try:
+        r = _post(cfg, "token?grant_type=pkce", {"auth_code": code, "code_verifier": verifier})
+    except requests.RequestException as e:
+        return None, f"Không kết nối được máy chủ đăng nhập: {e}"
+    if not r.ok:
+        return None, "Đăng nhập Google không thành công hoặc đã hết hạn – hãy thử lại."
+    auth = _session(r.json())
+    return (auth, None) if auth else (None, "Không nhận được thông tin người dùng.")
+
+
+def handle_google_return(cfg: dict) -> bool:
+    """Nếu địa chỉ có ?code= (vừa đăng nhập Google xong): đổi mã lấy phiên. True nếu đăng nhập thành công."""
+    try:
+        qp = st.query_params
+        code, err = qp.get("code"), qp.get("error_description") or qp.get("error")
+    except Exception:
+        return False
+    if err:
+        st.session_state["_google_error"] = f"Google từ chối đăng nhập: {err}"
+        qp.clear()
+        return False
+    if not code:
+        return False
+    verifier = st.session_state.get("_bridge_pkce") or ""
+    qp.clear()
+    st.session_state.pop("_pkce_verifier", None)
+    if not verifier:
+        st.session_state["_google_error"] = ("Không tìm thấy mã xác thực trên trình duyệt này – hãy bấm lại "
+                                             "Đăng nhập bằng Google (mở trên cùng trình duyệt).")
+        return False
+    auth, err = exchange_code(cfg, code, verifier)
+    _queue_pkce(None)                    # mã PKCE chỉ dùng 1 lần
+    st.session_state.pop("_pkce_verifier", None)
+    if err:
+        st.session_state["_google_error"] = err
+        return False
+    st.session_state["auth"] = auth
+    st.session_state.pop("_logged_out", None)
+    _queue_cookie(auth["refresh_token"])  # đăng nhập Google: luôn ghi nhớ trên trình duyệt này
+    return True
 
 
 def restore(cfg: dict, token: str | None = None) -> bool:
@@ -158,6 +271,12 @@ def waiting_screen() -> None:
             st.rerun()
 
 
+def intro_promise() -> str:
+    from . import intro
+    p = intro.PROMISE_SHORT
+    return p[0].lower() + p[1:]
+
+
 def login_screen(cfg: dict) -> None:
     """Vẽ màn hình đăng nhập; khi thành công lưu st.session_state['auth'] và chạy lại."""
     st.markdown("<style>[data-testid='stSidebar'],[data-testid='stSidebarCollapsedControl']{display:none}</style>"
@@ -166,7 +285,12 @@ def login_screen(cfg: dict) -> None:
     with mid:
         from . import style as _s
         _s.title("flame", "Hành trình FIRE")
-        st.caption("Đăng nhập bằng email – không cần mật khẩu. Mã 6 số sẽ được gửi vào hộp thư của bạn.")
+        signup = bool(cfg.get("allow_signup", False))
+        st.caption(("Nhập email để **đăng nhập hoặc tạo tài khoản mới**" if signup else "Đăng nhập bằng email")
+                   + " – không cần mật khẩu. Mã 6 số sẽ được gửi vào hộp thư của bạn.")
+        g_err = st.session_state.pop("_google_error", None)
+        if g_err:
+            st.error(g_err)
         step = st.session_state.get("_login_step", "email")
         if step == "email":
             with st.form("login_email"):
@@ -182,6 +306,13 @@ def login_screen(cfg: dict) -> None:
                             st.session_state["_login_email"] = email
                             st.session_state["_login_step"] = "code"
                             st.rerun()
+            if cfg.get("google") and st.session_state.get("_pkce_challenge"):
+                st.markdown("<div style='text-align:center;color:#8A8A8A;font-size:.85rem;margin:6px 0'>hoặc</div>",
+                            unsafe_allow_html=True)
+                st.link_button("Đăng nhập bằng Google", google_url(cfg, st.session_state["_pkce_challenge"]),
+                               width="stretch", icon=":material/account_circle:")
+                st.caption("Trang Google mở ở thẻ mới; đăng nhập xong app tự vào và ghi nhớ trên trình duyệt này.")
+            st.caption("Tiếp tục nghĩa là bạn đã đọc cam kết: app " + intro_promise())
         else:
             email = st.session_state.get("_login_email", "")
             st.info(f"Đã gửi mã tới **{email}**. Kiểm tra cả hộp thư Spam/Quảng cáo.")
@@ -218,7 +349,8 @@ def login_screen(cfg: dict) -> None:
         with st.expander("Lần đầu dùng app? Xem cách đăng nhập"):
             from . import style
             st.html(style.steps([
-                ("Nhập email", "Email phải được người quản trị cấp quyền trước. Bấm <b>Gửi mã đăng nhập</b>."),
+                ("Nhập email", "Gõ email của bạn rồi bấm <b>Gửi mã đăng nhập</b> – lần đầu app tự tạo tài khoản "
+                               "(nếu đang mở đăng ký). Hoặc bấm <b>Đăng nhập bằng Google</b> nếu có."),
                 ("Mở Gmail", "Tìm email <b>“Mã đăng nhập Hành trình FIRE”</b> (xem cả Spam) và lấy mã 6 số."),
                 ("Nhập mã", "Giữ ô <b>Ghi nhớ đăng nhập</b> để lần sau vào thẳng, rồi bấm <b>Đăng nhập</b>."),
                 ("Sau khi vào", "Mở <b>Hệ thống → Hướng dẫn</b> để xem các bước thiết lập và sử dụng."),

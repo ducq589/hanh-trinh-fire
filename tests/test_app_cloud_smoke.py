@@ -61,7 +61,8 @@ def test_all_pages_render_when_logged_in(entry):
         os.chdir(cwd)
 
 
-def test_login_screen_shows_intro_and_promise(tmp_path):
+@pytest.mark.parametrize("google", [True, False])
+def test_login_screen_shows_intro_and_promise(tmp_path, google):
     """Chưa đăng nhập: màn hình đăng nhập có phần giới thiệu ngắn và cam kết không khuyến nghị đầu tư."""
     from streamlit.testing.v1 import AppTest
     from fi_app import db, ui
@@ -69,10 +70,11 @@ def test_login_screen_shows_intro_and_promise(tmp_path):
     f.write_text('''
 import streamlit as st
 from fi_app import ui
-ui.cloud_config = lambda: {"url": "https://x.supabase.co", "anon_key": "anon", "db_url": "postgres://unused"}
+ui.cloud_config = lambda: {"url": "https://x.supabase.co", "anon_key": "anon", "db_url": "postgres://unused",
+                           "google": %s, "allow_signup": True, "site_url": "https://app.example"}
 st.session_state["_bridge_skip"] = True          # trong test không có trình duyệt chạy JS cầu nối
 exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
-''', encoding="utf-8")
+''' % google, encoding="utf-8")
     saved = (db.connect_cloud, ui.cloud_config)
     cwd = os.getcwd()
     os.chdir(ROOT)
@@ -84,6 +86,9 @@ exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
         assert any("Nhìn rõ con đường" in t for t in texts)
         assert any(x.label.startswith("Về Hành trình FIRE") for x in at.expander)
         assert page is not None
+        assert any("tạo tài khoản mới" in t for t in texts)                    # đang mở đăng ký
+        links = [b.proto.label for b in at.get("link_button")]
+        assert ("Đăng nhập bằng Google" in links) is google
     finally:
         db.connect_cloud, ui.cloud_config = saved
         os.chdir(cwd)

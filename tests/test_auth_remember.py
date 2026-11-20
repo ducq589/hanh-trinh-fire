@@ -63,13 +63,17 @@ class FakeBrowser:
         self.data_seen = []
 
     def component(self, name, js=None):
-        def render(key=None, data=None, on_rt_change=None):
+        def render(key=None, data=None, on_rt_change=None, on_pkce_change=None):
             self.data_seen.append(data)
-            if data and data.get("op") == "set":
-                self.storage[auth.COOKIE] = data["value"]
-            if data and data.get("op") == "clear":
-                self.storage.pop(auth.COOKIE, None)
-            return types.SimpleNamespace(rt=self.storage.get(auth.COOKIE, ""))
+            before = types.SimpleNamespace(rt=self.storage.get(auth.COOKIE, ""),
+                                           pkce=self.storage.get(auth.PKCE_KEY, ""))
+            for k, name in ((auth.COOKIE, "rt"), (auth.PKCE_KEY, "pkce")):
+                op = (data or {}).get(name)
+                if op and op.get("op") == "set":
+                    self.storage[k] = op["value"]
+                if op and op.get("op") == "clear":
+                    self.storage.pop(k, None)
+            return before                 # như JS thật: báo giá trị TRƯỚC khi ghi lệnh mới
         return render
 
 

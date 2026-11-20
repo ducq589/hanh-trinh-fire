@@ -40,8 +40,10 @@ with t1:
     l, r = st.columns([3, 2], gap="large")
     with l:
         st.html(style.steps([
-            ("Mở địa chỉ app", "Trên điện thoại hoặc máy tính, mở đường link app mà người quản trị gửi cho bạn."),
-            ("Nhập email", "Gõ email đã được cấp quyền rồi bấm <b>Gửi mã đăng nhập</b>."),
+            ("Mở địa chỉ app", "Trên điện thoại hoặc máy tính, mở đường link của app."),
+            ("Nhập email", "Gõ email của bạn rồi bấm <b>Gửi mã đăng nhập</b>. Lần đầu dùng, app tự tạo tài khoản "
+                           "cho email đó – không cần mật khẩu. Có nút <b>Đăng nhập bằng Google</b> thì có thể bấm "
+                           "luôn để bỏ qua bước nhập mã."),
             ("Mở hộp thư", "Bạn nhận email <b>“Mã đăng nhập Hành trình FIRE”</b> chứa mã 6 số "
                            "(xem cả mục Spam/Quảng cáo nếu chưa thấy)."),
             ("Nhập mã", "Gõ mã 6 số, giữ ô <b>Ghi nhớ đăng nhập (30 ngày)</b> nếu là thiết bị của bạn, "
@@ -54,7 +56,7 @@ with t1:
              ("ok", "Vào app")],
             rankdir="TB", highlight=("ok",)), width="content")
         st.html(style.tip("Không nhận được mã? Đợi 1 phút rồi bấm <b>← Dùng email khác / gửi lại mã</b>. "
-                          "Email chưa được cấp quyền sẽ báo lỗi – hãy nhờ người quản trị thêm email của bạn."))
+                          "Dùng Gmail? Bấm <b>Đăng nhập bằng Google</b> cho nhanh (nếu nút này đang hiện)."))
 
     st.subheader("Cài app lên màn hình điện thoại")
     a, b = st.columns(2)
@@ -283,8 +285,8 @@ with t4:
 with t5:
     faq = [
         ("Không nhận được email chứa mã?",
-         "Xem mục Spam/Quảng cáo. Đợi 1–2 phút rồi gửi lại. Nếu báo *“Email này chưa được cấp quyền”*, nhờ người quản trị "
-         "thêm email của bạn trong Supabase."),
+         "Xem mục Spam/Quảng cáo. Đợi 1–2 phút rồi gửi lại. Dùng Gmail thì có thể bấm **Đăng nhập bằng Google** "
+         "(nếu nút này đang hiện). Nếu báo *“app đang tạm đóng đăng ký mới”*, hãy liên hệ người quản trị."),
         ("Mở lại app vẫn phải nhập mã?",
          "Khi nhập mã, giữ ô *Ghi nhớ đăng nhập (30 ngày)*. Chế độ ẩn danh/riêng tư của trình duyệt sẽ không ghi nhớ được."),
         ("Giá không cập nhật / hiện cảnh báo “Giá cũ”?",

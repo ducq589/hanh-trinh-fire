@@ -46,14 +46,19 @@ def store(entry: bool = False) -> db.Store:
     a = st.session_state.get("auth")
     # Cầu nối ghi nhớ đăng nhập chỉ gắn 1 lần mỗi lượt chạy – ở lời gọi đầu tiên (app.py, entry=True).
     # Các trang gọi lại store() qua ui.state() không gắn nữa (trùng key → StreamlitDuplicateElementKey).
-    token = auth.bridge() if entry else None
+    token = None
+    if entry:
+        auth.prepare_google(cfg)              # đăng nhập Google: mã PKCE phải lưu vào trình duyệt trước khi bấm nút
+        token = auth.bridge()
     if not a:
         waiting = (entry and token is None and not st.session_state.get("_bridge_skip")
                    and not st.session_state.get("_logged_out") and not st.session_state.get("_restore_tried"))
         if waiting:                           # lượt chạy đầu: trình duyệt chưa kịp báo token → chờ (tự chạy lại)
             auth.waiting_screen()
             st.stop()
-        if auth.restore(cfg, token) or "_cookie_op" in st.session_state:
+        if entry and auth.handle_google_return(cfg):
+            st.rerun()                        # vừa đăng nhập Google → chạy lại để lưu token ghi nhớ
+        if auth.restore(cfg, token) or "_cookie_op" in st.session_state or "_pkce_op" in st.session_state:
             st.rerun()                        # chạy lại để bridge lưu token mới / xoá token hỏng ngay
         auth.login_screen(cfg)
         st.stop()

@@ -10,7 +10,7 @@ from fi_app import auth, db, engine, prices, style, ui
 st.set_page_config(page_title="Hành trình FIRE", page_icon="🔥", layout="wide")
 style.apply()
 
-store = ui.store()          # cloud: hiện màn hình đăng nhập nếu chưa đăng nhập
+store = ui.store(entry=True)   # cloud: hiện màn hình đăng nhập nếu chưa đăng nhập
 
 # Việc tự động mỗi phiên: sao lưu ngày (local), lấy giá (≤ 6 giờ/lần), Snapshot đầu tháng
 if not st.session_state.get("_startup_done"):

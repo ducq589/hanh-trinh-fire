@@ -29,7 +29,7 @@ def cloud_config() -> dict | None:
     return None
 
 
-def store() -> db.Store:
+def store(entry: bool = False) -> db.Store:
     """Store cho lượt chạy hiện tại.
 
     local: SQLite (tự import v3 ở lần chạy đầu).  cloud: bắt buộc đăng nhập, kết nối Postgres theo người dùng.
@@ -44,9 +44,11 @@ def store() -> db.Store:
         return s
     from . import auth
     a = st.session_state.get("auth")
-    token = auth.bridge()                     # ghi nhớ đăng nhập: token trong localStorage của trình duyệt
+    # Cầu nối ghi nhớ đăng nhập chỉ gắn 1 lần mỗi lượt chạy – ở lời gọi đầu tiên (app.py, entry=True).
+    # Các trang gọi lại store() qua ui.state() không gắn nữa (trùng key → StreamlitDuplicateElementKey).
+    token = auth.bridge() if entry else None
     if not a:
-        waiting = (token is None and not st.session_state.get("_bridge_skip")
+        waiting = (entry and token is None and not st.session_state.get("_bridge_skip")
                    and not st.session_state.get("_logged_out") and not st.session_state.get("_restore_tried"))
         if waiting:                           # lượt chạy đầu: trình duyệt chưa kịp báo token → chờ (tự chạy lại)
             auth.waiting_screen()

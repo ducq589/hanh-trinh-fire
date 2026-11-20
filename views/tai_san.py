@@ -1,14 +1,99 @@
 import pandas as pd
 import streamlit as st
 
-from fi_app import db, style, ui
+from fi_app import catalog, db, prices, style, ui
 
 c, data, h, fp = ui.state()
-style.title("briefcase", "Danh mục tài sản")
+style.title("briefcase", "Danh mục tài sản", "Chọn tài sản bạn đầu tư – quỹ, cổ phiếu, vàng được tự cập nhật giá mỗi ngày.")
+
+
+@st.cache_data(ttl=24 * 3600, show_spinner="Đang tải danh sách quỹ…")
+def _funds():
+    return catalog.list_funds()
+
+
+def _add(asset: dict):
+    """Thêm tài sản, lấy giá ngay rồi tải lại trang."""
+    try:
+        catalog.add(c, asset)
+    except ValueError as e:
+        st.error(str(e))
+        return
+    sym = db.asset_symbol(asset)
+    with st.spinner("Đang lấy giá…"):
+        try:
+            ok = any(x.startswith(f"✓ {sym}:") for x in prices.fetch_auto(c, backfill_days=400)["log"])
+        except Exception:  # noqa: BLE001 – mất mạng: tài sản vẫn được thêm, giá lấy lần sau
+            ok = False
+    ui.flash(f"Đã thêm {asset['code']} – {asset['name']}. "
+             + ("Đã lấy giá tự động." if ok else "Chưa lấy được giá lúc này, app sẽ thử lại khi mở lần sau.")
+             + " Bước tiếp: ghi giao dịch mua ở trang Giao dịch.")
+    st.rerun()
+
+
+existing = {a["code"] for a in data["assets"]}
+with st.container(border=True, key="them_ts"):
+    st.subheader("Thêm tài sản")
+    st.caption("Chọn từ danh mục có sẵn → app tự điền loại, tầng, lợi suất kỳ vọng và **nguồn giá tự động**. "
+               "Bạn sửa lại được ở bảng bên dưới.")
+    t_q, t_cp, t_v, t_k = st.tabs(["Chứng chỉ quỹ", "Cổ phiếu / ETF", "Vàng", "Khác"], key="tabs_them")
+    style.tab_icons("tabs_them", ["chart-pie", "chart-candle", "coin", "edit"])
+
+    with t_q:
+        try:
+            funds = [f for f in _funds() if f["code"] not in existing]
+        except Exception:  # noqa: BLE001
+            funds = None
+            st.warning("Không tải được danh sách quỹ từ Fmarket lúc này. Thử lại sau, hoặc dùng tab **Khác**.")
+        if funds is not None:
+            groups = sorted({f["group"] for f in funds if f["group"]})
+            grp = st.pills("Nhóm quỹ", ["Tất cả", *groups], default="Tất cả", key="nhom_quy")
+            shown = [f for f in funds if grp in (None, "Tất cả") or f["group"] == grp]
+            fund = st.selectbox(f"Chọn quỹ ({len(shown)} quỹ)", shown, index=None, placeholder="Gõ mã hoặc tên quỹ…",
+                                format_func=lambda f: f"{f['code']} – {f['name']}", key="chon_quy")
+            if fund:
+                typ = catalog.fund_type(fund["group"])
+                st.caption(f"{fund['group']} · NAV hiện tại **{ui.vnd(fund['nav'])} ₫** · Loại: {typ} · "
+                           f"Tầng: {catalog._DEFAULTS[typ]['tier']}")
+                if st.button(f"Thêm {fund['code']}", type="primary", key=style.ic("plus", "them_quy")):
+                    _add(catalog.build("fund", fund["code"], f"{typ} {fund['code']}", asset_type=typ))
+
+    with t_cp:
+        a1, a2 = st.columns([1, 2])
+        sym = a1.text_input("Mã chứng khoán", max_chars=10, placeholder="VD: FPT, E1VFVN30",
+                            key="ma_cp").strip().upper()
+        kind = a2.radio("Loại", ["Cổ phiếu", "ETF"], horizontal=True, key="loai_cp")
+        if sym:
+            if sym in existing:
+                st.info(f"{sym} đã có trong danh mục.")
+            elif st.button(f"Kiểm tra & thêm {sym}", type="primary", key=style.ic("plus", "them_cp")):
+                q = catalog.stock_quote(sym)
+                if not q:
+                    st.error(f"Không tìm thấy giá của mã {sym} trên VNDirect. Kiểm tra lại mã.")
+                else:
+                    _add(catalog.build("stock", sym, f"{kind} {sym}", asset_type=kind))
+
+    with t_v:
+        g1, g2 = st.columns([2, 1])
+        prod = g1.selectbox("Loại vàng (giá mua vào của PNJ, theo chỉ)", list(catalog.GOLD_PRODUCTS),
+                            format_func=lambda k: catalog.GOLD_PRODUCTS[k], key="loai_vang")
+        default_code = "VANG" if "VANG" not in existing else f"VANG{prod}"[:12]
+        gcode = g2.text_input("Mã trong app", value=default_code, max_chars=12, key="ma_vang").strip().upper()
+        st.caption("Ghi số lượng theo **chỉ** khi nhập giao dịch (1 lượng = 10 chỉ).")
+        if st.button("Thêm vàng", type="primary", key=style.ic("plus", "them_vang")):
+            try:
+                _add(catalog.build("gold", gcode, catalog.GOLD_PRODUCTS[prod], gold_product=prod))
+            except ValueError as e:
+                st.error(str(e))
+
+    with t_k:
+        st.markdown("Tiết kiệm, bảo hiểm, bất động sản, tiền mặt… **không có giá thị trường**: thêm 1 dòng ở cuối "
+                    "**bảng Danh sách tài sản** bên dưới, để trống cột *Nguồn giá* và chọn *Cách định giá* "
+                    "(Sổ tiết kiệm / Khai báo).")
 
 st.subheader("Danh sách tài sản")
-st.caption("Thêm tài sản mới = thêm 1 dòng ở cuối bảng. **Mã** ngắn, không dấu cách, không trùng (VD: DCBF, FPT, VANGNHAN). "
-           "Sau đó nhập giao dịch và giá – tài sản tự xuất hiện ở Tổng quan và Kế hoạch FIRE.")
+st.caption("Sửa trực tiếp trong bảng rồi bấm **Lưu danh mục**. Thêm dòng ở cuối bảng cho tài sản tự khai báo. "
+           "**Mã** ngắn, không dấu cách, không trùng.")
 df = pd.DataFrame(data["assets"], columns=["code", "name", "type", "tier", "fire_include", "exp_return",
                                            "target_weight", "valuation", "price_source", "unit", "note", "sort_order"])
 df["fire_include"] = df["fire_include"].astype(bool)

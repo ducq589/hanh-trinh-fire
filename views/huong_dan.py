@@ -67,11 +67,12 @@ with t1:
 # =====================================================================
 with t2:
     st.subheader("Bạn đã có file Excel “Investment_tracking_v3” chưa?")
+    st.caption("**Không có file Excel vẫn dùng đầy đủ** – làm theo Cách B. File Excel chỉ giúp chuyển dữ liệu cũ sang nhanh hơn.")
     st.graphviz_chart(style.flow(
         [("q", "Có file Excel v3?"), ("u", "Sao lưu & Cài đặt\\n→ tải file lên"), ("done", "Dữ liệu sẵn sàng"),
-         ("ts", "① Tài sản"), ("tc", "② Thu chi"), ("gd", "③ Giao dịch"), ("gia", "④ Giá"),
+         ("tc", "① Thu chi"), ("ts", "② Chọn tài sản\\n(giá tự cập nhật)"), ("gd", "③ Giao dịch"), ("gia", "④ Giá tay\\n(nếu cần)"),
          ("tk", "⑤ Tiết kiệm · Nợ"), ("fire", "⑥ Kế hoạch FIRE")],
-        edges=[("q", "u", "Có"), ("u", "done", ""), ("q", "ts", "Chưa"), ("ts", "tc", ""), ("tc", "gd", ""),
+        edges=[("q", "u", "Có"), ("u", "done", ""), ("q", "tc", "Chưa"), ("tc", "ts", ""), ("ts", "gd", ""),
                ("gd", "gia", ""), ("gia", "tk", ""), ("tk", "fire", ""), ("fire", "done", "")],
         rankdir="TB", highlight=("done",)).replace('q [label="Có file Excel v3?"]',
                                                    'q [label="Có file Excel v3?", shape=diamond, fillcolor="#1C1C1C"]'),
@@ -89,24 +90,28 @@ with t2:
 
     st.markdown("#### Cách B – Bắt đầu từ đầu (6 bước)")
     st.html(style.steps([
-        ("Khai báo tài sản", "Trang <b>Tài sản</b>: mỗi tài sản 1 dòng ở cuối bảng – <b>Mã</b> ngắn không dấu cách "
-                             "(VD: DCDS, MBB, VANG), <b>Tầng</b>, <b>Tính FIRE?</b>, <b>Cách định giá</b>, "
-                             "<b>Nguồn giá</b> (để app tự lấy giá). Bấm <b>Lưu danh mục</b>."),
-    ]))
-    go_to("tai_san", "Tài sản")
-    st.html(style.steps([
         ("Khai hồ sơ thu chi", "Trang <b>Thu chi</b>: điền số tiền <b>điển hình</b> của từng khoản thu/chi theo "
-                               "đúng tần suất (Tháng/Quý/Năm) – app tự quy đổi ra mỗi tháng. Bấm <b>Lưu hồ sơ thu chi</b>."),
-    ], start=2))
+                               "đúng tần suất (Tháng/Quý/Năm) – app tự quy đổi ra mỗi tháng. Bấm <b>Lưu hồ sơ thu chi</b>. "
+                               "Không cần ghi chi tiêu hằng ngày."),
+    ]))
     go_to("thu_chi", "Thu chi")
+    st.html(style.steps([
+        ("Chọn tài sản đầu tư", "Trang <b>Tài sản</b> → khung <b>Thêm tài sản</b>:"
+                                "<br>• <b>Chứng chỉ quỹ</b>: gõ mã/tên quỹ (DCDS, VESAF, VNDBF…) rồi bấm Thêm."
+                                "<br>• <b>Cổ phiếu / ETF</b>: gõ mã (FPT, MBB, E1VFVN30…) → Kiểm tra & thêm."
+                                "<br>• <b>Vàng</b>: chọn loại (SJC, nhẫn trơn…) → Thêm vàng."
+                                "<br>App tự điền Tầng, lợi suất kỳ vọng và <b>tự lấy giá hằng ngày</b>. "
+                                "Tiết kiệm, bảo hiểm, BĐS: thêm dòng ở bảng bên dưới (tab <b>Khác</b>)."),
+    ], start=2))
+    go_to("tai_san", "Tài sản")
     st.html(style.steps([
         ("Ghi giao dịch đã có", "Trang <b>Giao dịch</b> → tab <b>Giao dịch khác</b>: nhập các lần mua trước đây. "
                                 "Tài sản có sẵn không rõ ngày mua (vàng, bảo hiểm) chọn loại <b>Vốn đầu kỳ</b>."),
     ], start=3))
     go_to("giao_dich", "Giao dịch")
     st.html(style.steps([
-        ("Cập nhật giá", "Trang <b>Giá</b>: bấm <b>Lấy giá mới nhất</b> cho quỹ/cổ phiếu; tài sản không có nguồn tự "
-                         "động (vàng, bảo hiểm, BĐS) thì điền cột <b>Giá mới</b> rồi bấm <b>Lưu</b>."),
+        ("Kiểm tra giá", "Quỹ, cổ phiếu, vàng chọn từ danh mục đã có giá tự động. Trang <b>Giá</b>: chỉ cần điền "
+                         "<b>Giá mới</b> cho tài sản tự khai báo (bảo hiểm, BĐS…) rồi bấm <b>Lưu</b>."),
     ], start=4))
     go_to("gia", "Giá")
     st.html(style.steps([

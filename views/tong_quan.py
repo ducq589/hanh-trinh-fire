@@ -11,7 +11,20 @@ style.title("home", "Tổng quan gia sản", f"Bức tranh tài chính của b�
             f"{len(data['transactions'])} giao dịch · {len(data['assets'])} tài sản")
 
 if not data["assets"]:
-    st.info("Chưa có dữ liệu. Vào **Sao lưu & Cài đặt** để nhập từ file Excel v3.")
+    with st.container(border=True):
+        st.subheader("Chào mừng! Bắt đầu trong 3 bước")
+        st.html(style.steps([
+            ("Khai thu chi", "Thu nhập, chi tiêu điển hình mỗi tháng/quý/năm – chỉ khai 1 lần."),
+            ("Chọn tài sản", "Chọn quỹ, cổ phiếu, vàng từ danh mục – giá tự cập nhật hằng ngày."),
+            ("Ghi giao dịch mua", "Nhập các lần mua đã có, app tính lãi/lỗ và tiến độ FIRE."),
+        ]))
+        b1, b2, b3, b4 = st.columns(4)
+        for col, (ic, page, label) in zip((b1, b2, b3, b4), (
+                ("receipt", "thu_chi", "1 · Thu chi"), ("briefcase", "tai_san", "2 · Tài sản"),
+                ("plus", "giao_dich", "3 · Giao dịch"), ("book", "huong_dan", "Xem hướng dẫn"))):
+            with col.container(key=style.ic(ic, f"start_{page}")):
+                st.page_link(f"views/{page}.py", label=label, width="stretch")
+        st.caption("Đã có file Excel Investment_tracking_v3? Nhập 1 lần ở trang **Sao lưu & Cài đặt**.")
     st.stop()
 
 # --------------------------------------------------------------- KPI cards

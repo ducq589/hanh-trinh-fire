@@ -120,7 +120,7 @@ def test_system_price_job_reads_all_users(dsn, monkeypatch):
         s.close()
     seen = []
 
-    def fake_fetch(assets, last, today=None):
+    def fake_fetch(assets, last, today=None, **kw):
         seen.extend(a["code"] for a in assets)
         return [sources.Quote(TODAY, a["code"], 100.0, "fake") for a in assets], ["ok"]
 

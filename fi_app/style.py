@@ -22,7 +22,7 @@ TARGET_LEAN = "#FFD166"     # đường mục tiêu Lean FIRE
 _CSS = f"""
 <style>
 /* ---- khung chung ---- */
-.block-container {{ padding-top: 2.2rem; max-width: 1280px; }}
+.block-container {{ padding-top: 4.6rem; max-width: 1280px; }}
 h1, h2, h3 {{ letter-spacing: -0.01em; }}
 [data-testid="stCaptionContainer"], .stCaption {{ color: {MUTED} !important; }}
 
@@ -108,7 +108,7 @@ button[data-testid="stBaseButton-primaryFormSubmit"] {{ color: #111 !important; 
 .kpis .kpi {{ min-height: 0; }}
 @media (max-width: 900px) {{ .kpis {{ grid-template-columns: repeat(2, minmax(0,1fr)); }} }}
 @media (max-width: 640px) {{
-  .block-container {{ padding-top: 1rem; }}
+  .block-container {{ padding-top: 3.8rem; }}
   h1 {{ font-size: 1.7rem !important; }} h2, h3 {{ font-size: 1.25rem !important; }}
   .kpis {{ gap: 10px; }} .kpi {{ padding: 14px 14px; border-radius: 16px; }}
   .kpi .v {{ font-size: 1.35rem; }} .kpi .lb {{ font-size: .78rem; }} .kpi .sub {{ font-size: .72rem; }}

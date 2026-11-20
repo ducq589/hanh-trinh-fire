@@ -113,7 +113,7 @@ def export_csv(store: db.Store, path: Path = GIA_CSV, keep_backup: bool = True) 
 
 
 # ----------------------------------------------------------------- lấy giá tự động
-def fetch_auto(store: db.Store, today: dt.date | None = None) -> dict:
+def fetch_auto(store: db.Store, today: dt.date | None = None, backfill_days: int = 30) -> dict:
     """Lấy giá cho mọi tài sản có price_source (+ chỉ số VNINDEX), ghi vào bảng giá thị trường dùng chung."""
     from . import sources
     assets = store.q("SELECT DISTINCT code, price_source FROM assets "
@@ -135,7 +135,7 @@ def fetch_auto(store: db.Store, today: dt.date | None = None) -> dict:
     for t in targets:
         name_args = sources.parse_spec(t["price_source"], t["_asset"])
         fixed.append({"code": t["code"], "price_source": ":".join([name_args[0], *name_args[1]])})
-    quotes, log = sources.fetch(fixed, last, today)
+    quotes, log = sources.fetch(fixed, last, today, max_backfill_days=backfill_days)
     n = store.market_upsert([(q.code, q.date.isoformat(), q.price, q.source) for q in quotes])
     if store.kind == "sqlite" or store.user_id:          # job hệ thống (không có người dùng) không ghi meta
         db.set_kv(store, "meta", {"last_auto_fetch": dt.datetime.now().isoformat(timespec="seconds")})

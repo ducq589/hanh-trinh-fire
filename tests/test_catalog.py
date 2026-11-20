@@ -44,3 +44,36 @@ def test_add_new_user_without_excel(store):
     h = engine.holdings(db.load_all(store))
     row = next(r for r in h["rows"] if r["code"] == "DCDS")
     assert row["price"] == 100000.0 and round(row["value"]) == 10_526_000
+
+
+FUNDS = [{"code": "DCBF", "name": "QUỸ TRÁI PHIẾU DC", "group": "Quỹ trái phiếu", "nav": 30000.0},
+         {"code": "DCDS", "name": "QUỸ ĐẦU TƯ DC", "group": "Quỹ cổ phiếu", "nav": 90000.0}]
+
+
+def test_detect_fund_etf_stock_unknown():
+    has_quote = lambda c: (None, 1.0) if c in ("FPT", "E1VFVN30") else None   # noqa: E731
+    f = catalog.detect("dcbf", FUNDS, has_quote)
+    assert (f["type"], f["price_source"], f["tier"]) == ("Quỹ mở trái phiếu", "fmarket", "Thu nhập")
+    assert catalog.detect("FPT", FUNDS, has_quote)["type"] == "Cổ phiếu"
+    e = catalog.detect("E1VFVN30", None, has_quote)                     # Fmarket lỗi vẫn thêm được ETF
+    assert (e["type"], e["price_source"]) == ("ETF", "vndirect")
+    with pytest.raises(ValueError, match="Không tìm thấy"):
+        catalog.detect("XYZ123", FUNDS, has_quote)
+
+
+def test_remove_only_without_orders(store):
+    import datetime as dt
+    catalog.add(store, catalog.build("fund", "DCDS", "DCDS"))
+    catalog.add(store, catalog.build("stock", "FPT", "FPT"))
+    db.set_opening(store, "DCDS", 10, 90000, dt.date(2026, 6, 1))
+    db.upsert_price(store, "2026-06-01", "DCDS", 91000, "tay")
+    store.market_upsert([("fmarket:DCDS", "2026-06-01", 90500.0, "t")])
+    db.add_transaction(store, "2026-06-02", "FPT", "Mua", price=100000, qty=10)
+    assert catalog.removable(store, "DCDS") and not catalog.removable(store, "FPT")
+    catalog.remove(store, "DCDS")
+    assert [a["code"] for a in db.load_all(store)["assets"]] == ["FPT"]
+    assert store.q("SELECT * FROM transactions WHERE code='DCDS'") == []
+    assert store.q("SELECT * FROM prices WHERE code='DCDS'") == []
+    assert store.one("SELECT COUNT(*) AS n FROM market_prices WHERE symbol='fmarket:DCDS'") == 1   # giá dùng chung giữ nguyên
+    with pytest.raises(ValueError, match="đã có lệnh"):
+        catalog.remove(store, "FPT")

@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from fi_app import db, engine, style, ui
+from fi_app import catalog, db, engine, style, ui
 
 c, data, h, fp = ui.state()
 style.title("receipt", "Giao dịch")
@@ -23,6 +23,29 @@ with tab_open:
                "**Số lượng đang có** và **Giá vốn bình quân** (hoặc Tổng vốn). Từ nay mua thêm thì ghi ở tab *Mua DCA nhanh*.")
     st.html(style.tip("Lấy số ở đâu? App Fmarket / app quỹ: <b>Tài sản</b> → Số CCQ, Giá vốn BQ. "
                       "App chứng khoán: <b>Danh mục</b> → Khối lượng, Giá vốn. Số lượng CCQ ghi đủ 2 số lẻ."))
+    # ---- thêm / bỏ mã ngay tại đây
+    with st.form("them_ma", clear_on_submit=True, border=False):
+        a1, a2, a3 = st.columns([3, 1.2, 2], vertical_alignment="bottom")
+        new_code = a1.text_input("Chưa có mã trong bảng? Gõ mã quỹ / cổ phiếu để thêm",
+                                 placeholder="VD: DCBF, FPT, E1VFVN30", max_chars=12)
+        submitted = a2.form_submit_button("Thêm", type="primary", width="stretch",
+                                          key=style.ic("plus", "them_ma_open"))
+    with a3.container(key=style.ic("coin", "lk_vang_open")):
+        st.page_link("views/tai_san.py", label="Vàng, BĐS…", width="stretch")
+    if submitted and new_code.strip():
+        code_u = new_code.strip().upper()
+        if any(a["code"] == code_u for a in data["assets"]):
+            st.info(f"{code_u} đã có trong bảng bên dưới.")
+        else:
+            with st.spinner(f"Đang tìm {code_u}…"):
+                try:
+                    asset = catalog.detect(code_u, ui.funds_or_none())
+                except ValueError as e:
+                    asset = None
+                    st.error(f"{e}. Vàng, bảo hiểm, BĐS… thêm ở trang **Tài sản**.")
+            if asset:
+                ui.add_asset(c, asset, hint=" Điền Số lượng đang có và Giá vốn BQ ở bảng bên dưới.")
+
     rows_by = {r["code"]: r for r in h["rows"]}
     op_rows = []
     for a in market:
@@ -39,7 +62,7 @@ with tab_open:
     num_cols = ["qty", "avg", "total", "price", "pnl"]
     op_df[num_cols] = op_df[num_cols].astype(float)            # ô trống hiển thị trống thay vì "None"
     if op_df.empty:
-        st.info("Chưa có tài sản nào. Thêm quỹ/cổ phiếu ở trang **Tài sản** trước.")
+        st.info("Chưa có tài sản nào. Gõ mã quỹ / cổ phiếu ở ô phía trên rồi bấm **Thêm**.")
     else:
         edited = st.data_editor(op_df, key="open_ed", hide_index=True, width="stretch", disabled=["code", "name", "orders", "price", "pnl"],
                                 column_config={
@@ -85,6 +108,20 @@ with tab_open:
             words = {"added": "đã thêm", "updated": "đã cập nhật", "deleted": "đã xoá", "none": "không đổi"}
             ui.flash("Số dư đầu kỳ: " + ", ".join(f"{x.split()[0]} {words[x.split()[1]]}" for x in res))
             st.rerun()
+        can_remove = [a["code"] for a in market if catalog.removable(c, a["code"])]
+        with st.expander("Bỏ mã khỏi danh mục", key=style.ic("trash", "bo_ma")):
+            if not can_remove:
+                st.caption("Không có mã nào bỏ được. Mã đã có lệnh giao dịch: xoá lệnh ở tab *Lịch sử & sửa* trước.")
+            else:
+                st.caption("Chỉ bỏ được mã **chưa có lệnh Mua/Bán/Cổ tức** (số dư đầu kỳ của mã cũng bị xoá theo). "
+                           "Mã đã có lệnh: xoá lệnh ở tab *Lịch sử & sửa* trước.")
+                rm = st.multiselect("Chọn mã", can_remove, format_func=names.get, key="rm_codes")
+                sure = st.checkbox("Tôi muốn bỏ các mã đã chọn", key="rm_sure")
+                if st.button("Bỏ", disabled=not (rm and sure), key=style.ic("trash", "bo_ma_btn")):
+                    for code_rm in rm:
+                        catalog.remove(c, code_rm)
+                    ui.flash(f"Đã bỏ khỏi danh mục: {', '.join(rm)}")
+                    st.rerun()
         st.caption("Lãi/lỗ = (Giá hiện tại − Giá vốn) × Số lượng. XIRR của các mã này tính **từ ngày khai**, "
                    "hiện sau 30 ngày. Ô mờ ghi None = chưa khai. Xoá trắng Số lượng để bỏ số dư đầu kỳ của mã đó.")
 

@@ -1,34 +1,17 @@
 import pandas as pd
 import streamlit as st
 
-from fi_app import catalog, db, prices, style, ui
+from fi_app import catalog, db, style, ui
 
 c, data, h, fp = ui.state()
 style.title("briefcase", "Danh mục tài sản", "Chọn tài sản bạn đầu tư – quỹ, cổ phiếu, vàng được tự cập nhật giá mỗi ngày.")
 
 
-@st.cache_data(ttl=24 * 3600, show_spinner="Đang tải danh sách quỹ…")
-def _funds():
-    return catalog.list_funds()
+_funds = ui.funds
 
 
 def _add(asset: dict):
-    """Thêm tài sản, lấy giá ngay rồi tải lại trang."""
-    try:
-        catalog.add(c, asset)
-    except ValueError as e:
-        st.error(str(e))
-        return
-    sym = db.asset_symbol(asset)
-    with st.spinner("Đang lấy giá…"):
-        try:
-            ok = any(x.startswith(f"✓ {sym}:") for x in prices.fetch_auto(c, backfill_days=400)["log"])
-        except Exception:  # noqa: BLE001 – mất mạng: tài sản vẫn được thêm, giá lấy lần sau
-            ok = False
-    ui.flash(f"Đã thêm {asset['code']} – {asset['name']}. "
-             + ("Đã lấy giá tự động." if ok else "Chưa lấy được giá lúc này, app sẽ thử lại khi mở lần sau.")
-             + " Đã mua từ trước? Khai số lượng & giá vốn ở Giao dịch → Tài sản đang có.")
-    st.rerun()
+    ui.add_asset(c, asset, hint=" Đã mua từ trước? Khai số lượng & giá vốn ở Giao dịch → Tài sản đang có.")
 
 
 existing = {a["code"] for a in data["assets"]}

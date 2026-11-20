@@ -186,3 +186,37 @@ def xirr_label(r: dict) -> str:
 
 
 XIRR_NOTE = "\\* XIRR tính từ ngày khai số dư đầu kỳ (không có lịch sử lệnh trước đó)."
+
+
+# ---------------------------------------------------------------- thêm tài sản từ danh mục (dùng chung)
+@st.cache_data(ttl=24 * 3600, show_spinner="Đang tải danh sách quỹ…")
+def funds() -> list[dict]:
+    from . import catalog
+    return catalog.list_funds()
+
+
+def funds_or_none() -> list[dict] | None:
+    try:
+        return funds()
+    except Exception:  # noqa: BLE001 – Fmarket không trả lời: vẫn thêm được cổ phiếu
+        return None
+
+
+def add_asset(c, asset: dict, hint: str = "") -> bool:
+    """Thêm tài sản, lấy giá ngay (kèm ~13 tháng lịch sử) rồi tải lại trang. Trùng mã → báo lỗi, trả False."""
+    from . import catalog, prices
+    try:
+        catalog.add(c, asset)
+    except ValueError as e:
+        st.error(str(e))
+        return False
+    sym = db.asset_symbol(asset)
+    with st.spinner("Đang lấy giá…"):
+        try:
+            ok = any(x.startswith(f"✓ {sym}:") for x in prices.fetch_auto(c, backfill_days=400)["log"])
+        except Exception:  # noqa: BLE001 – mất mạng: tài sản vẫn được thêm, giá lấy lần sau
+            ok = False
+    flash(f"Đã thêm {asset['code']} – {asset['name']}. "
+          + ("Đã lấy giá tự động." if ok else "Chưa lấy được giá lúc này, app sẽ thử lại khi mở lần sau.") + hint)
+    st.rerun()
+    return True

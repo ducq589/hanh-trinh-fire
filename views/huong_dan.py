@@ -110,6 +110,7 @@ with t2:
     st.html(style.steps([
         ("Ghi tài sản đang có", "Trang <b>Giao dịch</b>:"
                                 "<br>• <b>Không muốn nhập lại lịch sử</b> (đã mua nhiều lần): tab <b>Tài sản đang có</b> → "
+                                "chưa có mã trong bảng thì gõ mã ở ô <b>Thêm</b> phía trên (VD: DCBF, FPT) → "
                                 "điền <b>Số lượng đang có</b> và <b>Giá vốn bình quân</b> (xem trong app Fmarket/app chứng khoán) "
                                 "→ <b>Lưu khai báo</b>. Lãi/lỗ tính ngay; XIRR tính từ ngày khai."
                                 "<br>• <b>Muốn đủ lịch sử</b>: tab <b>Giao dịch khác</b>, nhập từng lần mua – XIRR chính xác từ đầu."),

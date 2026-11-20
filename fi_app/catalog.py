@@ -104,3 +104,42 @@ def add(store: db.Store, asset: dict) -> None:
                 (asset["code"], asset["name"], asset["type"], asset["tier"], asset["fire_include"],
                  asset["exp_return"], asset["target_weight"], asset["valuation"], asset["price_source"],
                  asset["unit"], asset["note"], order))
+
+
+def _is_etf(code: str) -> bool:
+    return code.startswith(("E1", "FUE")) or "ETF" in code
+
+
+def detect(code: str, funds: list[dict] | None, quote=None) -> dict:
+    """Tự nhận diện mã: quỹ mở (Fmarket) → cổ phiếu/ETF (VNDirect). Không tìm thấy → ValueError.
+
+    funds: danh sách từ list_funds() (None nếu không tải được); quote: hàm tra giá cổ phiếu (mặc định stock_quote).
+    """
+    code = (code or "").strip().upper()
+    if not _CODE_RE.match(code):
+        raise ValueError("Mã chỉ gồm chữ/số, tối đa 12 ký tự, không dấu cách")
+    fund = next((f for f in funds or [] if f["code"] == code), None)
+    if fund:
+        typ = fund_type(fund["group"])
+        return build("fund", code, f"{typ} {code}", asset_type=typ)
+    if (quote or stock_quote)(code):
+        typ = "ETF" if _is_etf(code) else "Cổ phiếu"
+        return build("stock", code, f"{typ} {code}", asset_type=typ)
+    raise ValueError(f"Không tìm thấy mã {code} trên Fmarket (quỹ mở) hay VNDirect (cổ phiếu/ETF)")
+
+
+def removable(store: db.Store, code: str) -> bool:
+    """Bỏ được khi chưa có lệnh Mua/Bán/Cổ tức và chưa có sổ tiết kiệm (chỉ có số dư đầu kỳ hoặc trống)."""
+    orders = store.one("SELECT COUNT(*) AS n FROM transactions WHERE code = ? AND type <> ?", (code, db.OPENING))
+    books = store.one("SELECT COUNT(*) AS n FROM savings WHERE code = ?", (code,))
+    return not orders and not books
+
+
+def remove(store: db.Store, code: str) -> None:
+    """Bỏ tài sản khỏi danh mục cùng số dư đầu kỳ và giá nhập tay của nó (giá thị trường dùng chung giữ nguyên)."""
+    if not removable(store, code):
+        raise ValueError(f"{code} đã có lệnh giao dịch hoặc sổ tiết kiệm – xoá chúng trước")
+    with store.tx():
+        store.x("DELETE FROM transactions WHERE code = ? AND type = ?", (code, db.OPENING))
+        store.x("DELETE FROM prices WHERE code = ?", (code,))
+        store.x("DELETE FROM assets WHERE code = ?", (code,))

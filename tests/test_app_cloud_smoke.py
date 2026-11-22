@@ -282,10 +282,7 @@ exec(compile(open("app.py", encoding="utf-8").read(), "app.py", "exec"))
         assert any("tạo tài khoản mới" in t for t in texts)                    # đang mở đăng ký
         assert any("?doc=privacy" in str(h.proto.body) for h in at.get("html"))  # trang chủ có link chính sách
         links = [b.proto.label for b in at.get("link_button")]
-        assert ("Tiếp tục với Google" in links) is google
-        # Có Google: Google là cách chính, ô email nằm trong mục thu gọn; không có Google: ô email hiện ngay
-        email_box = [x for x in at.expander if x.label.startswith("Không dùng Gmail")]
-        assert bool(email_box) is google
+        assert ("Đăng nhập bằng Google" in links) is google
         assert "Gửi mã đăng nhập" in " ".join(b.label for b in at.button)
     finally:
         db.connect_cloud, ui.cloud_config = saved

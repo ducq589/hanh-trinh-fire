@@ -223,7 +223,7 @@ def handle_google_return(cfg: dict) -> bool:
     st.session_state.pop("_pkce_verifier", None)
     if not verifier:
         st.session_state["_google_error"] = ("Không tìm thấy mã xác thực trên trình duyệt này – hãy bấm lại "
-                                             "Tiếp tục với Google (mở trên cùng trình duyệt).")
+                                             "Đăng nhập bằng Google (mở trên cùng trình duyệt).")
         return False
     auth, err = exchange_code(cfg, code, verifier)
     _queue_pkce(None)                    # mã PKCE chỉ dùng 1 lần
@@ -360,6 +360,8 @@ def login_screen(cfg: dict) -> None:
         _s.title("flame", "Hành trình FIRE")
         signup = bool(cfg.get("allow_signup", False))
         google = bool(cfg.get("google")) and bool(st.session_state.get("_pkce_challenge"))
+        st.caption(("Nhập email để **đăng nhập hoặc tạo tài khoản mới**" if signup else "Đăng nhập bằng email")
+                   + " – không cần mật khẩu. Mã 6 số sẽ được gửi vào hộp thư của bạn.")
         if st.session_state.pop("_account_deleted", None):
             st.success("Đã xoá tài khoản và toàn bộ dữ liệu. Cảm ơn bạn đã đồng hành cùng Hành trình FIRE.")
         g_err = st.session_state.pop("_google_error", None)
@@ -368,28 +370,18 @@ def login_screen(cfg: dict) -> None:
         step = st.session_state.get("_login_step", "email")
         if step == "code":
             _code_form(cfg, _s)
-        elif google:
-            st.caption(("**Đăng nhập hoặc tạo tài khoản mới chỉ với 1 lần bấm** – lần đầu bấm, app tự tạo tài khoản "
-                        "từ Google của bạn." if signup else "Đăng nhập bằng tài khoản Google của bạn.")
-                       + " Không cần mật khẩu riêng.")
-            if in_app_browser():
-                st.warning("Bạn đang mở app trong **Zalo/Facebook/Messenger** – Google không cho đăng nhập ở đây. "
-                           "Bấm **⋯** ở góc màn hình → **Mở bằng trình duyệt** (Chrome/Safari), rồi đăng nhập lại.")
-            st.html(_GOOGLE_BTN_CSS)
-            with st.container(key="google_btn"):
-                st.link_button("Tiếp tục với Google", google_url(cfg, st.session_state["_pkce_challenge"]),
-                               width="stretch")
-            st.caption("Trang Google mở ở thẻ mới; đăng nhập xong app tự vào và ghi nhớ trên trình duyệt này. "
-                       "Nếu Google báo lỗi khi mở từ Zalo/Facebook, hãy mở link app bằng Chrome hoặc Safari.")
-            with st.expander("Không dùng Gmail? Đăng nhập bằng mã email", key=_s.ic("mail", "email_login")):
-                st.caption("Dành cho email Outlook, Yahoo, email cơ quan… "
-                           + ("Lần đầu dùng, app tự tạo tài khoản. " if signup else "")
-                           + "Mã 6 số sẽ được gửi vào hộp thư của bạn.")
-                _email_form(cfg, _s)
-            st.caption("Tiếp tục nghĩa là bạn đã đọc cam kết: app " + intro_promise())
         else:
-            st.caption(("Nhập email để **đăng nhập hoặc tạo tài khoản mới**" if signup else "Đăng nhập bằng email")
-                       + " – không cần mật khẩu. Mã 6 số sẽ được gửi vào hộp thư của bạn.")
+            if google:
+                if in_app_browser():
+                    st.warning("Bạn đang mở app trong **Zalo/Facebook/Messenger** – Google không cho đăng nhập ở đây. "
+                               "Bấm **⋯** ở góc màn hình → **Mở bằng trình duyệt** (Chrome/Safari), hoặc dùng mã email bên dưới.")
+                st.html(_GOOGLE_BTN_CSS)
+                with st.container(key="google_btn"):
+                    st.link_button("Đăng nhập bằng Google", google_url(cfg, st.session_state["_pkce_challenge"]),
+                                   width="stretch")
+                st.caption("Trang Google mở ở thẻ mới; đăng nhập xong app tự vào và ghi nhớ trên trình duyệt này.")
+                st.markdown("<div style='text-align:center;color:#8A8A8A;font-size:.85rem;margin:6px 0'>hoặc</div>",
+                            unsafe_allow_html=True)
             _email_form(cfg, _s)
             st.caption("Tiếp tục nghĩa là bạn đã đọc cam kết: app " + intro_promise())
         st.caption("Dữ liệu của mỗi tài khoản được tách riêng; người khác không xem được dữ liệu của bạn.")
@@ -409,12 +401,10 @@ def login_screen(cfg: dict) -> None:
         with st.expander("Lần đầu dùng app? Xem cách đăng nhập"):
             from . import style
             st.html(style.steps([
-                ("Bấm Tiếp tục với Google", "Chọn tài khoản Gmail của bạn – <b>lần đầu bấm là app tự tạo tài khoản</b>, "
-                                            "không cần chờ ai đăng ký giúp. Mở link bằng <b>Chrome/Safari</b> "
-                                            "(không mở trong Zalo/Facebook)."),
-                ("Không dùng Gmail?", "Mở mục <b>Đăng nhập bằng mã email</b>, gõ email rồi bấm "
-                                      "<b>Gửi mã đăng nhập</b>; lấy mã 6 số trong hộp thư (xem cả Spam) và nhập vào."),
-                ("Ghi nhớ đăng nhập", "Lần sau mở app trên cùng trình duyệt là vào thẳng, không cần đăng nhập lại."),
+                ("Nhập email", "Gõ email của bạn rồi bấm <b>Gửi mã đăng nhập</b> – lần đầu app tự tạo tài khoản "
+                               "(nếu đang mở đăng ký). Hoặc bấm <b>Đăng nhập bằng Google</b> nếu có."),
+                ("Mở Gmail", "Tìm email <b>“Mã đăng nhập Hành trình FIRE”</b> (xem cả Spam) và lấy mã 6 số."),
+                ("Nhập mã", "Giữ ô <b>Ghi nhớ đăng nhập</b> để lần sau vào thẳng, rồi bấm <b>Đăng nhập</b>."),
                 ("Sau khi vào", "Mở <b>Hệ thống → Hướng dẫn</b> để xem các bước thiết lập và sử dụng."),
             ]))
         from . import legal

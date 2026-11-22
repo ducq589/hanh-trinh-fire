@@ -28,7 +28,7 @@ with t1:
                 "tự cập nhật giá, và cho biết **bạn còn bao xa tới tự do tài chính (FIRE)**. "
                 "Bạn chỉ cần khai báo **một lần** rồi cập nhật khi có giao dịch – không phải ghi chép chi tiêu hằng ngày.")
     st.graphviz_chart(style.flow(
-        [("a", "1. Đăng nhập\\nGoogle hoặc mã email"), ("b", "2. Thiết lập lần đầu\\ntài sản · thu chi"),
+        [("a", "1. Đăng nhập\\nemail + mã 6 số"), ("b", "2. Thiết lập lần đầu\\ntài sản · thu chi"),
          ("c", "3. Ghi giao dịch\\nkhi mua / bán"), ("d", "4. Giá tự cập nhật\\nmỗi ngày"),
          ("e", "5. Theo dõi\\nTổng quan · Kế hoạch FIRE")],
         edges=[("a", "b", ""), ("b", "c", ""), ("c", "d", ""), ("d", "e", ""), ("e", "c", "lặp lại")],
@@ -41,22 +41,22 @@ with t1:
     with l:
         st.html(style.steps([
             ("Mở địa chỉ app", "Trên điện thoại hoặc máy tính, mở đường link của app."),
-            ("Bấm Tiếp tục với Google", "Chọn tài khoản Gmail của bạn. <b>Lần đầu bấm, app tự tạo tài khoản</b> – "
-                                        "không cần mật khẩu, không cần chờ ai đăng ký giúp. Nên mở link bằng "
-                                        "<b>Chrome/Safari</b>: Google không cho đăng nhập bên trong Zalo/Facebook."),
-            ("Không dùng Gmail?", "Mở mục <b>Đăng nhập bằng mã email</b>, gõ email (Outlook, Yahoo, email "
-                                  "cơ quan…) rồi bấm <b>Gửi mã đăng nhập</b>."),
-            ("Nhập mã 6 số", "Lấy mã trong email <b>“Mã đăng nhập Hành trình FIRE”</b> (xem cả Spam/Quảng cáo), "
-                             "giữ ô <b>Ghi nhớ đăng nhập (30 ngày)</b> rồi bấm <b>Đăng nhập</b>."),
+            ("Nhập email", "Gõ email của bạn rồi bấm <b>Gửi mã đăng nhập</b>. Lần đầu dùng, app tự tạo tài khoản "
+                           "cho email đó – không cần mật khẩu. Có nút <b>Đăng nhập bằng Google</b> thì có thể bấm "
+                           "luôn để bỏ qua bước nhập mã."),
+            ("Mở hộp thư", "Bạn nhận email <b>“Mã đăng nhập Hành trình FIRE”</b> chứa mã 6 số "
+                           "(xem cả mục Spam/Quảng cáo nếu chưa thấy)."),
+            ("Nhập mã", "Gõ mã 6 số, giữ ô <b>Ghi nhớ đăng nhập (30 ngày)</b> nếu là thiết bị của bạn, "
+                        "rồi bấm <b>Đăng nhập</b>."),
             ("Xong!", "Những lần sau mở app sẽ vào thẳng, không cần mã. Muốn thoát: bấm <b>Đăng xuất</b> ở thanh bên."),
         ]))
     with r:
         st.graphviz_chart(style.flow(
-            [("o", "Mở link app\\nbằng Chrome/Safari"), ("g", "Tiếp tục\\nvới Google"), ("c", "Chọn tài khoản\\nGmail"),
+            [("e", "Nhập email"), ("s", "Gửi mã"), ("m", "Mã 6 số\\ntrong Gmail"), ("v", "Đăng nhập"),
              ("ok", "Vào app")],
             rankdir="TB", highlight=("ok",)), width="content")
         st.html(style.tip("Không nhận được mã? Đợi 1 phút rồi bấm <b>← Dùng email khác / gửi lại mã</b>. "
-                          "Có Gmail thì bấm <b>Tiếp tục với Google</b> cho nhanh."))
+                          "Dùng Gmail? Bấm <b>Đăng nhập bằng Google</b> cho nhanh (nếu nút này đang hiện)."))
 
     st.subheader("Cài app lên màn hình điện thoại")
     a, b = st.columns(2)
@@ -288,7 +288,8 @@ with t4:
 with t5:
     faq = [
         ("Không nhận được email chứa mã?",
-         "Xem mục Spam/Quảng cáo. Đợi 1–2 phút rồi gửi lại. Có Gmail thì bấm **Tiếp tục với Google** cho nhanh. Nếu báo *“app đang tạm đóng đăng ký mới”*, hãy liên hệ người quản trị."),
+         "Xem mục Spam/Quảng cáo. Đợi 1–2 phút rồi gửi lại. Dùng Gmail thì có thể bấm **Đăng nhập bằng Google** "
+         "(nếu nút này đang hiện). Nếu báo *“app đang tạm đóng đăng ký mới”*, hãy liên hệ người quản trị."),
         ("Mở lại app vẫn phải nhập mã?",
          "Khi nhập mã, giữ ô *Ghi nhớ đăng nhập (30 ngày)*. Chế độ ẩn danh/riêng tư của trình duyệt sẽ không ghi nhớ được."),
         ("Giá không cập nhật / hiện cảnh báo “Giá cũ”?",

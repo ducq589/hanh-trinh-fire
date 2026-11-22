@@ -1,0 +1,26 @@
+name: Giữ app luôn thức
+
+# Streamlit Cloud cho app ngủ sau 12 giờ không có ai truy cập → mở app 6 giờ/lần (giờ UTC, GitHub có thể trễ vài chục phút).
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ghe-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cài trình duyệt chạy ngầm
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+      - name: Mở app
+        run: python scripts/giu_app_thuc.py

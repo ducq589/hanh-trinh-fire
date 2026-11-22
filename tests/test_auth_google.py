@@ -116,3 +116,13 @@ def test_send_code_respects_allow_signup(env, flag):
     sb, st, br = env
     assert auth.send_code({**CFG, "allow_signup": flag}, "moi@example.com") is None
     assert sb.calls[-1][1]["create_user"] is flag
+
+
+def test_in_app_browser_detection():
+    """Zalo/Facebook/Messenger: Google chặn OAuth → app nhắc mở bằng Chrome/Safari."""
+    zalo = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Zalo iOS/600"
+    fb = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131 Mobile [FB_IAB/FB4A;FBAV/480.0]"
+    safari = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1"
+    chrome = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36"
+    assert auth.in_app_browser(zalo) and auth.in_app_browser(fb)
+    assert not auth.in_app_browser(safari) and not auth.in_app_browser(chrome) and not auth.in_app_browser("")

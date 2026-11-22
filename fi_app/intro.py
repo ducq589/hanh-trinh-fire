@@ -110,7 +110,7 @@ FAQ = [  # (câu hỏi, trả lời – markdown)
      "không phải khuyến nghị hay cam kết lợi nhuận."),
     ("Ai xem được dữ liệu của tôi?",
      "Chỉ bạn. Dữ liệu mỗi tài khoản được tách riêng trên cơ sở dữ liệu (phân quyền theo từng dòng dữ liệu – "
-     "tài khoản khác không đọc được). Đăng nhập bằng mã gửi qua email, app không lưu mật khẩu."),
+     "tài khoản khác không đọc được). Đăng nhập bằng Google hoặc mã gửi qua email, app không lưu mật khẩu."),
     ("Giá lấy từ đâu, có chính xác không?",
      "Từ các nguồn công khai: NAV quỹ (Fmarket), giá đóng cửa cổ phiếu/ETF (VNDirect), giá vàng (PNJ). "
      "Giá có thể chậm khoảng 1 ngày – hãy đối chiếu với nơi bạn giao dịch khi cần con số chính xác."),

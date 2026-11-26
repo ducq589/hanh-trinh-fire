@@ -13,15 +13,15 @@ codes = [a["code"] for a in market]
 names = {a["code"]: f"{a['code']} – {a['name']}" for a in market}
 book = h["book"]
 
-tab_open, tab_dca, tab_other, tab_hist = st.tabs(["Tài sản đang có", "Mua DCA nhanh", "Giao dịch khác", "Lịch sử & sửa"],
+tab_dca, tab_other, tab_open, tab_hist = st.tabs(["Mua CCQ nhanh", "Giao dịch khác", "Tài sản đang có", "Lịch sử & sửa"],
                                                  key="tabs_gd")
-style.tab_icons("tabs_gd", ["wallet", "bolt", "plus", "history"])
+style.tab_icons("tabs_gd", ["bolt", "plus", "wallet", "history"])
 
 # --------------------------------------------------------------- opening balances
 with tab_open:
     st.caption("**Khai báo lần đầu** – chỉ hiện tài sản **chưa có dữ liệu**. Đã mua CCQ/cổ phiếu từ trước và **không muốn "
                "nhập lại từng lệnh**? Chỉ cần chép 2 con số cho mỗi tài sản: "
-               "**Số lượng đang có** và **Giá vốn bình quân** (hoặc Tổng vốn). Từ nay mua thêm thì ghi ở tab *Mua DCA nhanh*.")
+               "**Số lượng đang có** và **Giá vốn bình quân** (hoặc Tổng vốn). Từ nay mua thêm thì ghi ở tab *Mua CCQ nhanh*.")
     st.html(style.tip("Lấy số ở đâu? App Fmarket / app quỹ: <b>Tài sản</b> → Số CCQ, Giá vốn BQ. "
                       "App chứng khoán: <b>Danh mục</b> → Khối lượng, Giá vốn. Số lượng CCQ ghi đủ 2 số lẻ."))
     # ---- thêm / bỏ mã ngay tại đây
@@ -103,27 +103,34 @@ with tab_open:
 
 # --------------------------------------------------------------- DCA
 with tab_dca:
-    st.caption("Mua quỹ mở theo số tiền: app tự tra NAV đúng ngày và tính số CCQ = TRUNC(Số tiền / NAV, 2).")
+    st.caption("Mua quỹ mở theo số tiền: app tự tra NAV **ngày phân bổ** và tính số CCQ = TRUNC(Số tiền / NAV, 2). "
+               "Đặt mua hôm nay mà quỹ chưa có NAV? Chọn ngày phân bổ (thường là phiên kế tiếp) và lưu luôn – "
+               "app tự tính số CCQ khi NAV ngày đó được cập nhật.")
     col = st.columns([2, 1.2, 1.5, 1.5])
     code = col[0].selectbox("Tài sản", codes, format_func=names.get, key="dca_code")
-    day = col[1].date_input("Ngày", dt.date.today(), format="DD/MM/YYYY", key="dca_day")
+    day = col[1].date_input("Ngày phân bổ CCQ", dt.date.today(), format="DD/MM/YYYY", key="dca_day",
+                            help="Ngày quỹ ghi NAV cho lệnh của bạn (xem trong app quỹ/sao kê). Có thể chọn ngày mai.")
     amount = col[2].number_input("Số tiền (₫)", min_value=0, step=100_000, value=0, key="dca_amt")
     nav_found = book.on(code, day)
     price = col[3].number_input("Giá/NAV (₫) – để 0 nếu tự tra", min_value=0.0, step=10.0,
                                 value=0.0, format="%.2f", key="dca_price")
     use_price = price or nav_found
+    pending = bool(amount) and not use_price
     if use_price and amount:
         qty = engine.trunc2(amount / use_price)
         st.info(f"Giá dùng: **{ui.num(use_price)} ₫** {'(tra từ bảng giá)' if not price else '(nhập tay)'} → "
                 f"số lượng **{ui.num(qty)}**, giá trị {ui.vnd(qty * use_price)}")
-    elif amount and not use_price:
-        st.warning(f"Chưa có giá {code} ngày {day:%d/%m/%Y}. Nhập giá/NAV ở ô bên cạnh, "
-                   "hoặc cập nhật giá ở trang **Giá** trước.")
-    if st.button("Lưu giao dịch mua", type="primary", disabled=not (amount and use_price), key=style.ic("device-floppy", "luudca")):
-        db.add_transaction(c, day, code, "Mua", amount=amount, price=price or None)
+    elif pending:
+        st.warning(f"Chưa có NAV {code} ngày {day:%d/%m/%Y} → lưu dạng **chờ phân bổ**: số tiền được ghi ngay, "
+                   "số CCQ tự tính khi giá ngày đó có ở trang **Giá**. Trong lúc chờ, tài sản tính theo số tiền đã mua.")
+    label = "Lưu – chờ NAV" if pending else "Lưu giao dịch mua"
+    if st.button(label, type="primary", disabled=not amount, key=style.ic("device-floppy", "luudca")):
+        note = f"Đặt mua {dt.date.today():%d/%m/%Y}" if pending else None
+        db.add_transaction(c, day, code, "Mua", amount=amount, price=price or None, note=note)
         if price and not nav_found:
             db.upsert_price(c, day, code, price, "Nhập khi mua (app)", is_manual=1)
-        ui.flash(f"Đã lưu: mua {code} {ui.vnd(amount)} ngày {day:%d/%m/%Y}")
+        ui.flash(f"Đã lưu: mua {code} {ui.vnd(amount)} – phân bổ ngày {day:%d/%m/%Y}"
+                 + (" (chờ NAV)" if pending else ""))
         st.rerun()
 
 # --------------------------------------------------------------- other types
@@ -170,7 +177,8 @@ with tab_hist:
     f1, f2, f3 = st.columns([2, 1, 1])
     sel = f1.multiselect("Lọc theo mã", sorted({t["code"] for t in data["transactions"]}))
     start = f2.date_input("Từ ngày", dt.date.today() - dt.timedelta(days=365), format="DD/MM/YYYY")
-    end = f3.date_input("Đến ngày", dt.date.today(), format="DD/MM/YYYY")
+    last_tx = max((engine.to_date(t["date"]) for t in data["transactions"]), default=dt.date.today())
+    end = f3.date_input("Đến ngày", max(dt.date.today(), last_tx), format="DD/MM/YYYY")   # gồm lệnh chờ phân bổ
     derived = {t["id"]: t for t in h["transactions"]}
     txs = [t for t in data["transactions"]
            if (not sel or t["code"] in sel) and start <= engine.to_date(t["date"]) <= end]

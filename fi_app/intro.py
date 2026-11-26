@@ -151,7 +151,7 @@ FEATURES = [  # (nhóm, [(icon, tiêu đề, mô tả, trang hoặc None, tên n
         ("receipt", "Hồ sơ thu chi khai một lần",
          "Số tiền điển hình theo tháng/quý/năm, rà soát mỗi quý – không ghi chi tiêu hằng ngày.", "thu_chi",
          "thu chi khai 1 lần"),
-        ("plus", "Mua DCA nhanh 30 giây",
+        ("plus", "Mua CCQ nhanh 30 giây",
          "Ghi lần mua định kỳ trong vài chạm; đã có tài sản từ trước thì chỉ khai số lượng + giá vốn.", "giao_dich",
          "ghi DCA nhanh"),
         ("pig-money", "Sổ tiết kiệm, mục tiêu & nợ",

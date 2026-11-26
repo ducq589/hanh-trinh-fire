@@ -217,7 +217,7 @@ GUIDES: dict[str, dict] = {
     "opening": {
         "title": "Tài sản đang có (khai lần đầu)",
         "intro": "Dành cho tài sản đã mua từ trước, **không muốn nhập lại từng lệnh**. Mỗi mã lưu thành **1 giao dịch "
-                 "Vốn đầu kỳ**; sau này mua thêm thì ghi ở tab *Mua DCA nhanh*.",
+                 "Vốn đầu kỳ**; sau này mua thêm thì ghi ở tab *Mua CCQ nhanh*.",
         "cols": [
             ("Số lượng đang có", "Số, 2 chữ số lẻ", "Có",
              "Số CCQ / cổ phiếu / chỉ vàng đang nắm giữ. Để trống = bỏ qua mã đó.", "Giao dịch: Vốn đầu kỳ (cột Số lượng)",

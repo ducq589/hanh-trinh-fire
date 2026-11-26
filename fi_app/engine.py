@@ -180,8 +180,10 @@ def derive_tx(tx: dict, book: PriceBook) -> dict:
     net_in = gt + fee if t in BUY_LIKE else -(gt - fee - tax) if t == "Bán" else 0.0
     dividend = n(tx.get("amount")) if t == "Cổ tức TM" else 0.0
     cash = -(gt + fee) if t == "Mua" else (gt - fee - tax) if t == "Bán" else dividend
+    # Mua theo số tiền nhưng chưa có NAV ngày phân bổ → "chờ phân bổ": tiền đã ghi, số CCQ tính khi có NAV
+    pending = t == "Mua" and tx.get("qty") in (None, "") and price_used <= 0 and n(tx.get("amount")) > 0
     return {**tx, "d": d, "price_used": price_used, "qty_calc": qty, "value": gt, "dqty": dqty,
-            "net_in": net_in, "dividend": dividend, "cashflow": cash}
+            "net_in": net_in, "dividend": dividend, "cashflow": cash, "pending": pending}
 
 
 # ================================================================ savings & goals
@@ -249,6 +251,8 @@ def holdings(data: dict, today: dt.date | None = None) -> dict:
                 r["warning"] = "Chưa có giá" if mine else ""
             elif (today - r["price_date"]).days > stale_days:
                 r["warning"] = f"Giá cũ {(today - r['price_date']).days} ngày"
+            waiting = [t for t in mine if t["pending"]]
+            mine = [t for t in mine if not t["pending"]]           # XIRR chỉ tính lệnh đã có NAV
             opening = [t for t in mine if t["type"] == "Vốn đầu kỳ"]
             if not opening:
                 flows = [(t["d"], t["cashflow"]) for t in mine if t["cashflow"] != 0]
@@ -271,6 +275,11 @@ def holdings(data: dict, today: dt.date | None = None) -> dict:
                         flows = None
             if r["price_date"] and flows:
                 r["xirr"] = xirr([v for _, v in flows] + [r["value"]], [d for d, _ in flows] + [r["price_date"]])
+            if waiting:   # tiền chờ phân bổ tính theo giá vốn, tránh hiện lỗ giả
+                r["pending_amount"] = sum(n(t.get("amount")) for t in waiting)
+                r["value"] += r["pending_amount"]
+                ds = ", ".join(sorted({t["d"].strftime("%d/%m") for t in waiting}))
+                r["warning"] = "; ".join(x for x in (r["warning"], f"Chờ NAV ngày {ds}") if x)
         r["pnl"] = r["value"] - r["cost"] + r["dividends"]
         r["pnl_pct"] = r["pnl"] / r["cost"] if r["cost"] else 0.0
         r["fire_value"] = r["value"] if a.get("fire_include") else 0.0

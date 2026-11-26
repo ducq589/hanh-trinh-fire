@@ -188,7 +188,7 @@ with t2:
 with t3:
     st.subheader("Lịch sử dụng gợi ý")
     st.html('<div class="cal">'
-            f'<div class="c"><div class="h">{style.svg("bolt")} Mỗi lần mua</div><ul><li>Giao dịch → Mua DCA nhanh</li>'
+            f'<div class="c"><div class="h">{style.svg("bolt")} Mỗi lần mua</div><ul><li>Giao dịch → Mua CCQ nhanh</li>'
             '<li>Chọn quỹ, nhập số tiền, Lưu</li></ul></div>'
             f'<div class="c"><div class="h">{style.svg("calendar-event")} Mỗi tuần</div><ul><li>Xem hộp <b>Việc cần chú ý</b></li>'
             '<li>Cập nhật giá vàng/BĐS nếu có</li></ul></div>'
@@ -201,7 +201,7 @@ with t3:
     l, r = st.columns([3, 2], gap="large")
     with l:
         st.html(style.steps([
-            ("Mở Giao dịch → Mua DCA nhanh", "Hoặc bấm <b>Mua DCA</b> ở thẻ Thao tác nhanh của trang Tổng quan."),
+            ("Mở Giao dịch → Mua CCQ nhanh", "Hoặc bấm <b>Mua CCQ</b> ở thẻ Thao tác nhanh của trang Tổng quan."),
             ("Chọn tài sản & ngày", "Ngày mặc định là hôm nay."),
             ("Nhập số tiền", "App tự tra NAV đúng ngày và tính số chứng chỉ quỹ = Số tiền ÷ NAV (cắt 2 số lẻ). "
                              "Nếu chưa có NAV ngày đó, gõ NAV vào ô bên cạnh."),

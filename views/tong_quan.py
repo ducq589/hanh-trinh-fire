@@ -88,7 +88,7 @@ with right:
         a1.markdown("**Thao tác nhanh**")
         a1.caption("Ghi một lần mua DCA hoặc cập nhật giá")
         with a2.container(key=style.ic("plus", "lk_dca")):
-            st.page_link("views/giao_dich.py", label="Mua DCA", width="stretch")
+            st.page_link("views/giao_dich.py", label="Mua CCQ", width="stretch")
         with a2.container(key=style.ic("refresh", "lk_gia")):
             st.page_link("views/gia.py", label="Giá", width="stretch")
 

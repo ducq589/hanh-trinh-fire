@@ -115,22 +115,24 @@ hc1.markdown(f"**Sức khoẻ tài chính:** {good}/{known} chỉ số ở mức
 with hc2.container(key=style.ic("circle-check", "lk_health")):
     st.page_link("views/ke_hoach_fire.py", label="Xem chi tiết", width="stretch")
 
-# --------------------------------------------------------------- performance
+# --------------------------------------------------------------- tháp tài sản
+PYRAMID = [("Tăng trưởng", 4, "Tầng tăng trưởng"), ("Thu nhập", 3, "Tầng thu nhập"),
+           ("Bảo vệ", 2, "Tầng bảo vệ"), ("Phòng thủ", 1, "Tầng phòng thủ")]   # đỉnh → đáy
+by_tier = {t["tier"]: t for t in h["tiers"]}
+levels = []
+for tier, no, label in PYRAMID:
+    t = by_tier.get(tier, {"value": 0.0, "weight": 0.0})
+    items = sorted((r for r in h["rows"] if r.get("tier") == tier and r["value"]), key=lambda r: -r["value"])
+    levels.append({"no": no, "label": label, "color": style.TIER_COLORS[tier], "pct": ui.pct(t["weight"]),
+                   "value": ui.tr(t["value"]),
+                   "assets": [(r["name"], ui.tr(r["value"]), ui.pct(r["weight"])) for r in items]})
 with st.container(border=True):
-    st.subheader("Hiệu suất từng tài sản")
-    rows = pd.DataFrame(h["rows"])
-    view = pd.DataFrame({
-        "Tài sản": rows["name"], "Tầng": rows["tier"],
-        "Giá trị hiện tại": rows["value"].map(ui.vnd), "Lãi/lỗ": rows["pnl"].map(ui.vnd),
-        "% Lãi/lỗ": rows["pnl_pct"].map(ui.pct), "XIRR": [ui.xirr_label(r) for r in h["rows"]],
-        "Tỷ trọng": rows["weight"] * 100, "Cảnh báo": rows["warning"],
-    })
-    st.dataframe(view, hide_index=True, width="stretch", column_config={
-        "XIRR": st.column_config.TextColumn(help="Tỷ suất quy năm theo dòng tiền (– : không áp dụng)"),
-        "Tỷ trọng": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100, color="#B6F36A"),
-    })
-    if any(r.get("xirr_since") and r.get("xirr") is not None for r in h["rows"]):
-        st.caption(ui.XIRR_NOTE)
+    p1, p2 = st.columns([3, 1], vertical_alignment="center")
+    p1.subheader("Tháp tài sản")
+    p1.caption(f"Tổng {ui.tr(h['total_value'])} · % là tỷ trọng trên tổng tài sản; đáy tháp vững thì đỉnh mới an toàn.")
+    with p2.container(key=style.ic("briefcase", "lk_hieusuat")):
+        st.page_link("views/tai_san.py", label="Hiệu suất chi tiết", width="stretch")
+    st.html(style.pyramid(levels))
 
 soon = [s for s in h["savings"] if s["status"] in ("Sắp đáo hạn", "Quá hạn xử lý")]
 if soon:

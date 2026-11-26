@@ -99,6 +99,23 @@ button[data-testid="stBaseButton-primaryFormSubmit"] {{ color: #111 !important; 
 .obar {{ display:flex; align-items:center; gap:12px; margin:2px 0 12px; color:{MUTED}; font-size:.88rem; }}
 .obar .track {{ flex:1; height:8px; background:#333; border-radius:99px; overflow:hidden; }}
 .obar .track > div {{ height:100%; background:{LIME}; border-radius:99px; }}
+/* ---- tháp tài sản ---- */
+.pyr {{ display:flex; flex-direction:column; gap:6px; }}
+.pyr-row {{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr); gap:16px; align-items:stretch; }}
+.pyr-band {{ display:flex; justify-content:center; }}
+.pyr-band > div {{ display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:86px;
+  font-variant-numeric:tabular-nums; line-height:1.2; }}
+.pyr-band .no {{ font-size:.72rem; font-weight:600; opacity:.8; }} .pyr-band .p {{ font-size:1.15rem; font-weight:700; }}
+.pyr-info {{ background:{CARD}; border:1px solid #2C2C2C; border-left:4px solid #555; border-radius:14px; padding:10px 14px; }}
+.pyr-info .hd {{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; }}
+.pyr-info .t {{ color:{TEXT}; font-weight:700; }} .pyr-info .v {{ color:{LIME}; font-weight:700; margin-left:auto; }}
+.pyr-info .chips {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }}
+.pyr-info .chip {{ background:#1C1C1C; border:1px solid #333; border-radius:99px; padding:3px 10px; font-size:.8rem;
+  color:#DADADA; }}
+.pyr-info .chip span {{ color:{MUTED}; margin-left:6px; }} .pyr-info .empty {{ color:{MUTED}; font-size:.82rem; margin-top:6px; }}
+@media (max-width: 640px) {{ .pyr-row {{ grid-template-columns:118px minmax(0,1fr); gap:10px; }}
+  .pyr-band .p {{ font-size:.76rem; }} .pyr-band .no {{ font-size:.6rem; }}
+  .pyr-info {{ padding:9px 11px; }} .pyr-info .chip {{ font-size:.74rem; }} }}
 /* ---- sức khoẻ tài chính ---- */
 .hgrid {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }}
 @media (max-width: 900px) {{ .hgrid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} }}
@@ -342,6 +359,33 @@ def flow(nodes: list[tuple[str, str]], edges: list[tuple[str, str, str]] | None 
     for a, b, lbl in edges:
         lines.append(f'{a} -> {b}' + (f' [label=" {lbl} "]' if lbl else "") + ";")
     return "\n".join(lines) + "}"
+
+
+PYRAMID_WIDTHS = [28, 52, 72, 88, 100]   # bề rộng (%) tại các mép tầng, từ đỉnh xuống đáy
+
+
+def _ink(color: str) -> str:
+    """Màu chữ đọc rõ trên nền `color` (#RRGGBB)."""
+    r, g, b = (int(color[i:i + 2], 16) for i in (1, 3, 5))
+    return "#111" if 0.299 * r + 0.587 * g + 0.114 * b > 140 else TEXT
+
+
+def pyramid(levels: list[dict]) -> str:
+    """Tháp tài sản, đỉnh ở trên. levels (từ đỉnh xuống): no, label, color, pct, value, assets=[(tên, giá trị, %)]."""
+    rows, ws = [], PYRAMID_WIDTHS
+    for i, x in enumerate(levels[:len(ws) - 1]):
+        top, bot = ws[i], ws[i + 1]
+        inset = (bot - top) / 2 / bot * 100
+        band = (f'<div style="width:{bot}%;background:{x["color"]};color:{_ink(x["color"])};'
+                f'clip-path:polygon({inset:.2f}% 0,{100 - inset:.2f}% 0,100% 100%,0 100%)">'
+                f'<div class="no">Tầng {x["no"]}</div><div class="p">{esc(x["pct"])}</div></div>')
+        chips = ("".join(f'<span class="chip">{esc(n)}<span>{esc(v)} · {esc(p)}</span></span>' for n, v, p in x["assets"])
+                 if x["assets"] else "")
+        body = f'<div class="chips">{chips}</div>' if chips else '<div class="empty">Chưa có tài sản ở tầng này</div>'
+        rows.append(f'<div class="pyr-row"><div class="pyr-band">{band}</div>'
+                    f'<div class="pyr-info" style="border-left-color:{x["color"]}"><div class="hd">'
+                    f'<span class="t">{esc(x["label"])}</span><span class="v">{esc(x["value"])}</span></div>{body}</div></div>')
+    return f'<div class="pyr">{"".join(rows)}</div>'
 
 
 def legend(items: list[tuple[str, str, str]]) -> str:

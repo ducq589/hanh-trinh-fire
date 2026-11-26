@@ -671,3 +671,76 @@ def emergency_plan(essential: float, current: float, household: str, dependents:
 def ladder(amount: float, scheme: str) -> list[tuple[str, float, float]]:
     """Chia quỹ thành nhiều sổ: (kỳ hạn, tỷ lệ, số tiền)."""
     return [(lb, p, amount * p) for lb, p in LADDERS[scheme]]
+
+
+# ================================================================ lô CCQ (mua trước bán trước)
+FUND_TYPES = ("Quỹ mở cổ phiếu", "Quỹ mở trái phiếu", "ETF")
+
+
+def fund_lots(txs: list[dict], book: PriceBook, code: str) -> dict:
+    """Lô CCQ của 1 mã: mỗi lệnh mua là 1 lô; lệnh bán trừ vào lô cũ nhất trước (FIFO).
+
+    txs: giao dịch đã qua derive_tx (h["transactions"]). Chỉ để xem – không đổi cách tính ở holdings().
+    Trả về lots (mỗi lô: date, kind, qty, cost, remaining, remaining_cost, value, pnl, pct, pending)
+    và sales (mỗi lần bán: date, qty, proceeds, cost, pnl, pct, sources=[(ngày lô, số CCQ)], short).
+    """
+    mine = sorted((t for t in txs if t["code"] == code), key=lambda t: (t["d"], n(t.get("id"))))
+    price_date, price = book.latest(code)
+    lots, sales = [], []
+    for t in mine:
+        typ = t["type"]
+        if t.get("pending"):
+            lots.append({"date": t["d"], "kind": "Chờ NAV", "qty": 0.0, "cost": n(t.get("amount")), "remaining": 0.0,
+                         "pending": True, "price": None})
+        elif typ in BUY_LIKE + ("Cổ tức CP/Thưởng",) and t["qty_calc"] > 0:
+            cost = t["net_in"] if typ in BUY_LIKE else 0.0
+            lots.append({"date": t["d"], "kind": {"Mua": "Mua", "Vốn đầu kỳ": "Vốn đầu kỳ"}.get(typ, "Thưởng"),
+                         "qty": t["qty_calc"], "cost": cost, "remaining": t["qty_calc"], "pending": False,
+                         "price": t["price_used"] or None})
+        elif typ == "Bán" and t["qty_calc"] > 0:
+            need, basis, sources = t["qty_calc"], 0.0, []
+            for lot in lots:
+                if need <= 1e-9:
+                    break
+                if lot["pending"] or lot["remaining"] <= 1e-9:
+                    continue
+                take = min(need, lot["remaining"])
+                basis += take * lot["cost"] / lot["qty"]
+                lot["remaining"] -= take
+                need -= take
+                sources.append((lot["date"], take))
+            proceeds = t["value"] - n(t.get("fee")) - n(t.get("tax"))
+            sales.append({"date": t["d"], "qty": t["qty_calc"], "price": t["price_used"], "proceeds": proceeds,
+                          "cost": basis, "pnl": proceeds - basis, "pct": (proceeds - basis) / basis if basis else None,
+                          "sources": sources, "short": need > 1e-9})
+    for lot in lots:
+        if lot["pending"]:
+            lot.update(remaining_cost=lot["cost"], value=lot["cost"], pnl=0.0, pct=None)
+            continue
+        lot["remaining"] = trunc2(lot["remaining"] + 1e-9) if lot["remaining"] > 1e-9 else 0.0
+        rc = lot["remaining"] * lot["cost"] / lot["qty"]
+        val = lot["remaining"] * n(price)
+        lot.update(remaining_cost=rc, value=val, pnl=val - rc, pct=(val - rc) / rc if rc else None)
+    return {"code": code, "lots": lots, "sales": sales, "price": price, "price_date": price_date}
+
+
+def monthly_lots(results: list[dict]) -> list[dict]:
+    """Gộp lô theo (mã, năm, tháng) – giống bảng 'Tổng tiền đầu tư và lợi nhuận' theo tháng."""
+    acc: dict[tuple, dict] = {}
+    for res in results:
+        for lot in res["lots"]:
+            k = (res["code"], lot["date"].year, lot["date"].month)
+            m = acc.setdefault(k, {"code": k[0], "year": k[1], "month": k[2], "cost": 0.0, "qty": 0.0,
+                                   "remaining": 0.0, "remaining_cost": 0.0, "value": 0.0, "pending": 0.0})
+            m["cost"] += lot["cost"]
+            m["qty"] += lot["qty"]
+            m["remaining"] += lot["remaining"]
+            m["remaining_cost"] += lot["remaining_cost"]
+            m["value"] += lot["value"]
+            m["pending"] += lot["cost"] if lot["pending"] else 0.0
+    out = []
+    for m in sorted(acc.values(), key=lambda x: (x["year"], x["month"], x["code"])):
+        m["pnl"] = m["value"] - m["remaining_cost"]
+        m["pct"] = m["pnl"] / m["remaining_cost"] if m["remaining_cost"] else None
+        out.append(m)
+    return out

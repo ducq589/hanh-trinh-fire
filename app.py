@@ -3,9 +3,33 @@
 - Trên máy:  nhấp đúp Chay_app.command  (SQLite, 1 người dùng)
 - Trên cloud: Streamlit Community Cloud + Supabase (đăng nhập email, nhiều người dùng) – xem Trien_khai_cloud.md
 """
+import importlib
+import os
+import sys
+
 import streamlit as st
 
-from fi_app import auth, db, donate, engine, legal, prices, style, ui
+
+def _sync_modules(reload: bool) -> None:
+    """Streamlit Cloud có lúc giữ bản cũ của fi_app/* trong bộ nhớ sau khi cập nhật code (push mới)
+    → trang mới gọi hàm chưa có (AttributeError). reload=True: nạp lại module có file đã đổi so với lần ghi nhận
+    ở lượt chạy trước; module chưa ghi nhận thì chỉ ghi nhận."""
+    for name in sorted(n for n in sys.modules if n.startswith("fi_app.")):
+        mod = sys.modules[name]
+        path = getattr(mod, "__file__", None)
+        if not path or not os.path.exists(path):
+            continue
+        mtime, seen = os.path.getmtime(path), getattr(mod, "_fi_mtime", None)
+        if seen != mtime:
+            if reload and seen is not None:
+                importlib.reload(mod)
+            mod._fi_mtime = mtime
+
+
+_sync_modules(reload=True)
+from fi_app import auth, db, donate, engine, legal, prices, style, ui  # noqa: E402
+
+_sync_modules(reload=False)
 
 st.set_page_config(page_title="Hành trình FIRE", page_icon="🔥", layout="wide")
 style.apply()
